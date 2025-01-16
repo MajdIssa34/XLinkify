@@ -5,37 +5,52 @@ import { v2 as cloudinary } from "cloudinary";
 
 export const createPost = async (req, res) => {
     try {
-        const { text } = req.body;
-        const userId = req.user._id.toString();
-        let { img } = req.body;
+        let { text, img } = req.body;
 
+        if (!req.user) {
+            return res.status(401).json({ error: "Unauthorized: User not authenticated" });
+        }
+
+        const userId = req.user._id.toString();
+
+        // Validate user existence
         const user = await User.findById(userId);
         if (!user) {
             return res.status(400).json({ error: "User not found" });
         }
 
+        // Validate text or image presence
         if (!text && !img) {
             return res.status(400).json({ error: "Text or image is required" });
         }
-
+        let imageUrl;
+        if (img && !img.startsWith("data:image")) {
+            img = `data:image/png;base64,${img}`;
+          }
         if (img) {
-            const uploadedResponse = await cloudinary.uploader.upload(img);
-            img = uploadedResponse.secure_url;
+            try {
+                let uploadedResponse = await cloudinary.uploader.upload(img);
+                imageUrl = uploadedResponse.secure_url;
+            } catch (cloudinaryError) {
+                console.error("Cloudinary upload failed:", cloudinaryError.message);
+                return res.status(500).json({ error: "Image upload failed" });
+            }
         }
 
         const newPost = new Post({
             user: userId,
             text,
-            img,
+            img: imageUrl,
         });
         await newPost.save();
 
         res.status(201).json(newPost);
     } catch (error) {
-        res.status(500).json({ error: "err.message" });
-        console.log("Error in createPost controller:", error.message);
+        console.error("Error in createPost controller:", error.message);
+        res.status(500).json({ error: error.message });
     }
 };
+
 
 export const deletePost = async (req, res) => {
 

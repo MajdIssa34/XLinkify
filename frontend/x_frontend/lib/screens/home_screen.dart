@@ -57,7 +57,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       padding: const EdgeInsets.all(16.0),
                       child: Image.asset(
                         'assets/images/LinkifyLogo.png',
-                        height: 100,
+                        height: 300,
                       ),
                     ),
                     const SizedBox(height: 20),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:x_frontend/screens/home_screen.dart';
 import 'package:x_frontend/screens/signup_screen.dart';
 import '../services/auth_service.dart';
 import '../widgets/my_text_field.dart';
@@ -21,27 +22,44 @@ class _LoginScreenState extends State<LoginScreen> {
   String? _errorMessage;
 
   Future<void> _login() async {
-    if (_formKey.currentState!.validate()) {
-      setState(() {
-        _isLoading = true;
-        _errorMessage = null;
-      });
+  if (_formKey.currentState!.validate()) {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
 
-      try {
-        final response = await _authService.login(
-          _usernameController.text,
-          _passwordController.text,
-        );
-        print("Login successful: ${response['username']}");
-      } catch (error) {
-        setState(() {
-          _errorMessage = error.toString();
-        });
-      } finally {
-        setState(() => _isLoading = false);
-      }
+    try {
+      final response = await _authService.login(
+        _usernameController.text,
+        _passwordController.text,
+      );
+      print("Login successful: ${response['username']}");
+      
+      // Replace the current screen with HomeScreen and clear the stack
+      Navigator.pushAndRemoveUntil(
+        context,
+        PageRouteBuilder(
+          pageBuilder: (context, animation, secondaryAnimation) =>
+              HomeScreen(username: response['username']),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(
+              opacity: animation,
+              child: child,
+            );
+          },
+        ),
+        (route) => false, // Remove all previous routes
+      );
+    } catch (error) {
+      setState(() {
+        _errorMessage = error.toString();
+      });
+    } finally {
+      setState(() => _isLoading = false);
     }
   }
+}
+
 
   @override
   Widget build(BuildContext context) {
@@ -123,7 +141,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ),
                                   const SizedBox(width: 8),
                                   Expanded(
-                                    child: Text(
+                                    child: SelectableText(
                                       _errorMessage!,
                                       style: GoogleFonts.poppins(
                                         color: Colors.red.shade700,

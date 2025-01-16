@@ -12,6 +12,11 @@ dependencies:
     sdk: flutter
   http:
   google_fonts:
+  dio: 
+  cookie_jar: 
+  dio_cookie_manager: ^3.1.1
+  flutter_session_jwt:
+  flutter_secure_storage_web:
 
 dev_dependencies:
   flutter_test:
@@ -22,3 +27,4 @@ flutter:
   uses-material-design: true
   assets:
     - assets\images\LinkifyLogo.png
+    - assets\images\placeholder.png

@@ -3,10 +3,9 @@ import authRoutes from "./routes/auth.route.js";
 import userRoutes from "./routes/user.route.js";
 import postRoutes from "./routes/post.route.js";
 import notficationRoutes from "./routes/notification.route.js";
-import cors from "cors";
+import cors from "cors"; // Keep this import (ES Modules)
 
-import {v2 as cloudinary} from "cloudinary";
-
+import { v2 as cloudinary } from "cloudinary";
 import dotenv from "dotenv";
 import connectMongoDB from "./db/connectMongoDB.js";
 import cookieParser from "cookie-parser";
@@ -26,10 +25,28 @@ const PORT = process.env.PORT || 5000;
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
-app.use(cors({
-    origin: "*", // Replace with the origin of your Flutter web app
-    credentials: true, // Enable cookies if necessary
-}));
+
+// Configure CORS
+const allowedOrigins = [
+    "http://localhost:49167", // Add your Flutter app's origin
+    "http://localhost:58335",
+    "http://localhost:62461",
+    "http://localhost:63463"
+];
+
+app.use(
+    cors({
+        origin: function (origin, callback) {
+            // Check if the origin is in the allowedOrigins list
+            if (!origin || allowedOrigins.includes(origin)) {
+                callback(null, origin);
+            } else {
+                callback(new Error("Not allowed by CORS"));
+            }
+        },
+        credentials: true, // Allow cookies
+    })
+);
 
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);

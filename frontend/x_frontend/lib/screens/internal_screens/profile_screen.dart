@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class ProfileScreen extends StatelessWidget {
-  const ProfileScreen({Key? key}) : super(key: key);
+  final Map<String, dynamic> profile;
+  const ProfileScreen({Key? key, required this.profile}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {

@@ -1,41 +1,46 @@
+import 'package:animations/animations.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:x_frontend/screens/internal_screens/feed_screen.dart';
 import 'package:x_frontend/screens/internal_screens/notification_screen.dart';
 import 'package:x_frontend/screens/internal_screens/profile_screen.dart';
+import 'package:x_frontend/services/user_service.dart';
 
 class HomeScreen extends StatefulWidget {
-  final String username;
-  const HomeScreen({Key? key, required this.username}) : super(key: key);
+  final Map<String, dynamic> profile;
+  const HomeScreen({Key? key, required this.profile}) : super(key: key);
 
   @override
   _HomeScreenState createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int _selectedIndex = 0;
-  List<Map<String, String>> suggestedFriends = [
-    {"name": "John Doe", "image": ""},
-    {"name": "Jane Smith", "image": ""},
-    {"name": "Alex Johnson", "image": ""},
-  ];
+  final UserService _userService = UserService();
+  late Future<List<dynamic>> _suggestedFriends;
+  late List<Widget> _screens;
 
-  final List<Widget> _screens = [
-    const FeedScreen(),
-    const ProfileScreen(),
-    const NotificationsScreen(),
-  ];
+  int _selectedIndex = 0; // Track the selected index
 
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
+  @override
+  void initState() {
+    super.initState();
+
+    _screens = [
+      FeedScreen(
+        profile: widget.profile,
+      ), // Index 0: Feed Screen
+      ProfileScreen(profile: widget.profile), // Index 1: Profile Screen
+      NotificationsScreen(
+          profile: widget.profile), // Index 2: Notifications Screen
+    ];
+    // Fetch suggested friends
+    _suggestedFriends = _userService.getSuggestedUsers();
   }
 
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-
+    //print(widget.profile);
     return Scaffold(
       body: Row(
         children: [
@@ -52,7 +57,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       padding: const EdgeInsets.all(16.0),
                       child: Image.asset(
                         'assets/images/LinkifyLogo.png',
-                        height: 250,
+                        height: 100,
                       ),
                     ),
                     const SizedBox(height: 20),
@@ -78,63 +83,193 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
           ),
-          // Main Content
+          // Main Content (Feed)
           Expanded(
-            child: _screens[_selectedIndex],
+            child: PageTransitionSwitcher(
+              duration: const Duration(milliseconds: 300),
+              transitionBuilder: (child, primaryAnimation, secondaryAnimation) {
+                return SharedAxisTransition(
+                  animation: primaryAnimation,
+                  secondaryAnimation: secondaryAnimation,
+                  transitionType: SharedAxisTransitionType
+                      .horizontal, // Choose the transition type
+                  child: child,
+                );
+              },
+              child: _screens[
+                  _selectedIndex], // Dynamically show the current screen
+              key: ValueKey<int>(_selectedIndex), // Ensure smooth transition
+            ),
           ),
           // Right Panel for Suggested Friends
           Container(
             width: screenWidth > 800 ? 250 : 200,
-            color: const Color(0xFFF7F7F7),
+            color: const Color(0xFF000000),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Logged-in user's profile
                 Padding(
                   padding: const EdgeInsets.all(16.0),
-                  child: Text(
-                    'Suggested Friends',
-                    style: GoogleFonts.poppins(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 25,
+                        backgroundImage: NetworkImage(
+                          "https://via.placeholder.com/150",
+                        ), // Replace with actual profile image
+                      ),
+                      const SizedBox(width: 12),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            widget.profile['username'] ?? '',
+                            style: GoogleFonts.poppins(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          Text(
+                            "Full Name", // Replace with actual full name
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const Spacer(),
+                      TextButton(
+                        onPressed: () {
+                          // Handle switch account
+                        },
+                        child: const Text(
+                          "Switch",
+                          style: TextStyle(color: Colors.blue),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Divider(color: Colors.grey.shade800),
+                // Suggested Friends Section
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        "Suggested for you",
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () {
+                          // Handle "See All" action
+                        },
+                        child: Text(
+                          "See All",
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            color: Colors.blue,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 Expanded(
-                  child: ListView.builder(
-                    itemCount: suggestedFriends.length,
-                    itemBuilder: (context, index) {
-                      final friend = suggestedFriends[index];
-                      final hasImage = friend['image'] != null &&
-                          friend['image']!.isNotEmpty;
+                  child: FutureBuilder<List<dynamic>>(
+                    future: _suggestedFriends,
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(
+                          child: CircularProgressIndicator(),
+                        );
+                      } else if (snapshot.hasError) {
+                        return Center(
+                          child: Text(
+                            'Error: ${snapshot.error}',
+                            style: const TextStyle(color: Colors.red),
+                          ),
+                        );
+                      } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                        return const Center(
+                          child: Text(
+                            'No suggested friends available',
+                            style: TextStyle(fontSize: 16, color: Colors.white),
+                          ),
+                        );
+                      }
 
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16.0,
-                          vertical: 8.0,
-                        ),
-                        child: Row(
-                          children: [
-                            CircleAvatar(
-                              radius: 25,
-                              backgroundImage: hasImage
-                                  ? NetworkImage(friend['image']!)
-                                  : const AssetImage('assets/images/placeholder.png')
-                                      as ImageProvider,
+                      // Suggested friends list
+                      final suggestedFriends = snapshot.data!;
+                      return ListView.builder(
+                        itemCount: suggestedFriends.length,
+                        itemBuilder: (context, index) {
+                          final friend = suggestedFriends[index];
+                          final hasImage = friend['image'] != null &&
+                              friend['image']!.isNotEmpty;
+
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16.0,
+                              vertical: 8.0,
                             ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                friend['name']!,
-                                style: GoogleFonts.poppins(
-                                  fontSize: 14,
-                                  color: Colors.black87,
+                            child: Row(
+                              children: [
+                                CircleAvatar(
+                                  radius: 25,
+                                  backgroundImage: hasImage
+                                      ? NetworkImage(friend['image']!)
+                                      : const AssetImage(
+                                          'assets/images/placeholder.png',
+                                        ) as ImageProvider,
                                 ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        friend['name'] ?? '',
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      Text(
+                                        "Followed by ${friend['follower'] ?? ''}",
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 12,
+                                          color: Colors.grey,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                TextButton(
+                                  onPressed: () {
+                                    // Handle follow action
+                                  },
+                                  child: const Text(
+                                    "Follow",
+                                    style: TextStyle(color: Colors.blue),
+                                  ),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
+                          );
+                        },
                       );
                     },
                   ),
@@ -164,7 +299,9 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       selected: isSelected,
       onTap: () {
-        _onItemTapped(index);
+        setState(() {
+          _selectedIndex = index; // Update the selected index
+        });
       },
     );
   }

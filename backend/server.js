@@ -31,7 +31,8 @@ const allowedOrigins = [
     "http://localhost:49167", // Add your Flutter app's origin
     "http://localhost:58335",
     "http://localhost:62461",
-    "http://localhost:63463"
+    "http://localhost:63463",
+    "http://localhost:50399"
 ];
 
 app.use(

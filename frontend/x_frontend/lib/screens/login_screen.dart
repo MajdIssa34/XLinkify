@@ -33,14 +33,13 @@ class _LoginScreenState extends State<LoginScreen> {
         _usernameController.text,
         _passwordController.text,
       );
-      print("Login successful: ${response['username']}");
-      
+     //print(response['username']);
       // Replace the current screen with HomeScreen and clear the stack
       Navigator.pushAndRemoveUntil(
         context,
         PageRouteBuilder(
           pageBuilder: (context, animation, secondaryAnimation) =>
-              HomeScreen(username: response['username']),
+              HomeScreen(profile: response),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             return FadeTransition(
               opacity: animation,

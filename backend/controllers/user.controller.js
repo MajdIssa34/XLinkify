@@ -148,6 +148,7 @@ export const updateUser = async (req, res) => {
         return res.status(200).json({user});
 
     } catch (error) {
-        
+        res.status(500).json({ message: "Internal server error" });
+        console.log("Error in updateUser controller:", error.message);
     }
 };

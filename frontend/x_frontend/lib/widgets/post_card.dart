@@ -42,24 +42,21 @@ class _PostCardState extends State<PostCard> {
     }
   }
 
-  Future<void> _toggleLike() async {
+  Future<void> _toggleLike({Function? onSuccess}) async {
     try {
+      final isLiked = widget.post.likes.contains(widget.profile['_id']);
       setState(() {
-        if (widget.post.likes.contains(widget.profile['_id'])) {
+        if (isLiked) {
           widget.post.likes.remove(widget.profile['_id']);
         } else {
           widget.post.likes.add(widget.profile['_id']);
         }
       });
+
       await _postService.toggleLike(widget.post.id, widget.profile['_id']);
+
+      if (onSuccess != null) onSuccess(); // Refresh dialog state
     } catch (error) {
-      setState(() {
-        if (widget.post.likes.contains(widget.profile['_id'])) {
-          widget.post.likes.add(widget.profile['_id']);
-        } else {
-          widget.post.likes.remove(widget.profile['_id']);
-        }
-      });
       SnackBarUtil.showCustomSnackBar(
         context,
         'Error: ${error.toString()}',
@@ -73,13 +70,13 @@ class _PostCardState extends State<PostCard> {
     if (commentText.isEmpty) return;
 
     try {
+      final newComment = Comment(
+        text: commentText,
+        user: User.fromJson(widget.profile),
+      );
+
       setState(() {
-        widget.post.comments.add(
-          Comment(
-            text: commentText,
-            user: User.fromJson(widget.profile),
-          ),
-        );
+        widget.post.comments.add(newComment);
       });
 
       await _postService.addComment(
@@ -89,12 +86,8 @@ class _PostCardState extends State<PostCard> {
       );
 
       _commentController.clear();
-      if (onSuccess != null) onSuccess(); // Refresh the dialog content
+      if (onSuccess != null) onSuccess(); // Refresh dialog state
     } catch (error) {
-      setState(() {
-        widget.post.comments.removeWhere((c) => c.text == commentText);
-      });
-
       SnackBarUtil.showCustomSnackBar(
         context,
         'Error: ${error.toString()}',
@@ -106,306 +99,286 @@ class _PostCardState extends State<PostCard> {
   @override
   Widget build(BuildContext context) {
     final post = widget.post;
-    return Card(
-      color: Colors.white,
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10),
-      ),
-      elevation: 3,
-      child: Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Column(
+      children: [
+        Card(
+          color: Colors.white,
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+          elevation: 3,
+          child: Padding(
+            padding: const EdgeInsets.all(12.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    CircleAvatar(
-                      backgroundImage: post.user.profileImg.isNotEmpty
-                          ? NetworkImage(post.user.profileImg)
-                          : const AssetImage('assets/images/placeholder.png')
-                              as ImageProvider,
-                      radius: 25,
-                    ),
-                    const SizedBox(width: 12),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    Row(
                       children: [
-                        Row(
+                        CircleAvatar(
+                          backgroundImage: post.user.profileImg.isNotEmpty
+                              ? NetworkImage(post.user.profileImg)
+                              : const AssetImage(
+                                      'assets/images/placeholder.png')
+                                  as ImageProvider,
+                          radius: 25,
+                        ),
+                        const SizedBox(width: 12),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              post.user.username,
-                              style: GoogleFonts.poppins(
-                                color: Colors.black,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              '• ${_formatPostDate(post.createdAt)}',
-                              style: GoogleFonts.poppins(
-                                color: Colors.grey,
-                                fontSize: 12,
-                              ),
+                            Row(
+                              children: [
+                                Text(
+                                  post.user.username,
+                                  style: GoogleFonts.poppins(
+                                    color: Colors.black,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  '• ${_formatPostDate(post.createdAt)}',
+                                  style: GoogleFonts.poppins(
+                                    color: Colors.grey,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
                       ],
                     ),
-                  ],
-                ),
-                widget.profile['_id'] == post.user.id
-                    ? MyButton(
-                        onTap: () async {
-                          if (widget.profile['_id'] == post.user.id) {
-                            final confirmed = await showDialog<bool>(
-                              context: context,
-                              builder: (context) => AlertDialog(
-                                title: const Text('Delete Post'),
-                                content: Text(
-                                    'Are you sure you want to delete this post?',
-                                    style: GoogleFonts.poppins(
-                                      color: Colors.black,
-                                    )),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () =>
-                                        Navigator.pop(context, false),
-                                    child: Text('Cancel',
-                                        style: GoogleFonts.poppins()),
+                    widget.profile['_id'] == post.user.id
+                        ? MyButton(
+                            onTap: () async {
+                              if (widget.profile['_id'] == post.user.id) {
+                                final confirmed = await showDialog<bool>(
+                                  context: context,
+                                  builder: (context) => AlertDialog(
+                                    title: const Text('Delete Post'),
+                                    content: Text(
+                                        'Are you sure you want to delete this post?',
+                                        style: GoogleFonts.poppins(
+                                          color: Colors.black,
+                                        )),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () =>
+                                            Navigator.pop(context, false),
+                                        child: Text('Cancel',
+                                            style: GoogleFonts.poppins()),
+                                      ),
+                                      SizedBox(
+                                        width: 100,
+                                        child: MyButton(
+                                            onTap: () =>
+                                                Navigator.pop(context, true),
+                                            str: "Delete"),
+                                      )
+                                    ],
                                   ),
-                                  SizedBox(
-                                    width: 100,
-                                    child: MyButton(
-                                        onTap: () =>
-                                            Navigator.pop(context, true),
-                                        str: "Delete"),
-                                  )
-                                ],
-                              ),
-                            );
-
-                            if (confirmed == true) {
-                              try {
-                                await _postService.deletePost(post.id);
-                                setState(() {
-                                  // Immediately remove the post from the UI
-                                  widget.onRefresh();
-                                });
-                                SnackBarUtil.showCustomSnackBar(
-                                  context,
-                                  'Post deleted successfully!',
                                 );
-                              } catch (error) {
+
+                                if (confirmed == true) {
+                                  try {
+                                    await _postService.deletePost(post.id);
+                                    setState(() {
+                                      // Immediately remove the post from the UI
+                                      widget.onRefresh();
+                                    });
+                                    SnackBarUtil.showCustomSnackBar(
+                                      context,
+                                      'Post deleted successfully!',
+                                    );
+                                  } catch (error) {
+                                    SnackBarUtil.showCustomSnackBar(
+                                      context,
+                                      'Failed to delete post: ${error.toString()}',
+                                      isError: true,
+                                    );
+                                  }
+                                }
+                              } else {
                                 SnackBarUtil.showCustomSnackBar(
                                   context,
-                                  'Failed to delete post: ${error.toString()}',
+                                  'You can only delete your own posts',
                                   isError: true,
                                 );
                               }
-                            }
-                          } else {
-                            SnackBarUtil.showCustomSnackBar(
-                              context,
-                              'You can only delete your own posts',
-                              isError: true,
-                            );
-                          }
-                        },
-                        str: "Delete",
-                      )
-                    : const SizedBox(),
-              ],
-            ),
-            const SizedBox(height: 12),
-            if (post.img != null)
-              Center(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: Image.network(
-                    post.img!,
-                    fit: BoxFit.cover,
-                  ),
+                            },
+                            str: "Delete",
+                          )
+                        : const SizedBox(),
+                  ],
                 ),
-              ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                IconButton(
-                  icon: Icon(
-                    post.likes.contains(widget.profile['_id'])
-                        ? Icons.favorite
-                        : Icons.favorite_border,
-                    color: post.likes.contains(widget.profile['_id'])
-                        ? Colors.red
-                        : Colors.black,
-                  ),
-                  onPressed: _toggleLike,
-                ),
-                Text(
-                  '${post.likes.length} Likes',
-                  style: GoogleFonts.poppins(
-                    color: Colors.black,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                IconButton(
-                  icon: const Icon(Icons.comment, color: Colors.black),
-                  onPressed: () {
-                    _showCommentDialog(post);
-                  },
-                ),
-                Text(
-                  '${post.comments.length} Comments',
-                  style: GoogleFonts.poppins(
-                    color: Colors.black,
-                    fontSize: 16,
-                  ),
-                ),
-              ],
-            ),
-            Row(
-              children: [
-                Text(
-                  '${post.user.username} ',
-                  style: GoogleFonts.poppins(
-                    color: Colors.black,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                  ),
-                ),
-                Text(
-                  '${post.text}',
-                  style: GoogleFonts.poppins(
-                    color: Colors.black,
-                    fontSize: 14,
-                  ),
-                ),
-              ],
-            ),
-            const Divider(),
-            if (post.comments.isNotEmpty)
-              Column(
-                children: [
-                  ...post.comments.take(3).map((comment) {
-                    return Row(
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      children: [
-                        CircleAvatar(
-                          backgroundImage:
-                              const AssetImage('assets/images/placeholder.png'),
-                          radius: 15,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Row(
-                            children: [
-                              Text(
-                                '${comment.user.username}',
-                                style: GoogleFonts.poppins(
-                                    color: Colors.black,
-                                    fontWeight: FontWeight.bold),
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                '${comment.text}',
-                                style: GoogleFonts.poppins(color: Colors.black),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    );
-                  }).toList(),
-                  if (post.comments.length > 3)
-                    TextButton(
-                      onPressed: () {
-                        _showCommentDialog(post);
-                      },
-                      child: Text(
-                        'View all ${post.comments.length} comments',
-                        style: GoogleFonts.poppins(color: Colors.blue),
+                const SizedBox(height: 12),
+                if (post.img != null)
+                  Center(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: Image.network(
+                        post.img!,
+                        fit: BoxFit.cover,
                       ),
                     ),
-                ],
-              ),
-            Row(
-              children: [
-                CircleAvatar(
-                  backgroundImage: widget.profile['profileImg'].isNotEmpty
-                      ? NetworkImage(widget.profile['profileImg'])
-                      : const AssetImage('assets/images/placeholder.png')
-                          as ImageProvider,
-                  radius: 15,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: MyTextField(
-                    controller: _commentController,
-                    hintText: Text(
-                      'Add a comment...',
-                      style: GoogleFonts.poppins(color: Colors.grey),
-                    ),
-                    keyboardType: TextInputType.multiline,
                   ),
+                // Username and post text above likes and comments if there's no image
+                if (post.img == null)
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${post.user.username} ',
+                        style: GoogleFonts.poppins(
+                          color: Colors.black,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                      Expanded(
+                        child: Text(
+                          '${post.text}',
+                          style: GoogleFonts.poppins(
+                            color: Colors.black,
+                            fontSize: 16,
+                          ),
+                          overflow: TextOverflow.clip,
+                          softWrap: true,
+                        ),
+                      ),
+                    ],
+                  ),
+                Row(
+                  children: [
+                    IconButton(
+                      icon: Icon(
+                        post.likes.contains(widget.profile['_id'])
+                            ? Icons.favorite
+                            : Icons.favorite_border,
+                        color: post.likes.contains(widget.profile['_id'])
+                            ? Colors.red
+                            : Colors.black,
+                      ),
+                      onPressed: _toggleLike,
+                    ),
+                    Text(
+                      '${post.likes.length} Likes',
+                      style: GoogleFonts.poppins(
+                        color: Colors.black,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    IconButton(
+                      icon: const Icon(Icons.comment, color: Colors.black),
+                      onPressed: () {
+                        _showTextCommentDialog(post);
+                      },
+                    ),
+                    Text(
+                      '${post.comments.length} Comments',
+                      style: GoogleFonts.poppins(
+                        color: Colors.black,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ],
                 ),
-                IconButton(
-                  icon: const Icon(Icons.send, color: Colors.blue),
-                  onPressed: () {
-                    _addComment(onSuccess: () {
-                      setState(() {}); // Refresh the dialog content
-                    });
-                  },
+                // Username and post text below likes and comments if there's an image
+                if (post.img != null)
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 2),
+                      Text(
+                        '${post.user.username} ',
+                        style: GoogleFonts.poppins(
+                          color: Colors.black,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                      Expanded(
+                        child: Text(
+                          '${post.text}',
+                          style: GoogleFonts.poppins(
+                            color: Colors.black,
+                            fontSize: 16,
+                          ),
+                          overflow: TextOverflow.clip,
+                          softWrap: true,
+                        ),
+                      ),
+                    ],
+                  ),
+                Row(
+                  children: [
+                    CircleAvatar(
+                      backgroundImage: widget.profile['profileImg'].isNotEmpty
+                          ? NetworkImage(widget.profile['profileImg'])
+                          : const AssetImage('assets/images/placeholder.png')
+                              as ImageProvider,
+                      radius: 15,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: MyTextField(
+                        controller: _commentController,
+                        hintText: Text(
+                          'Add a comment...',
+                          style: GoogleFonts.poppins(color: Colors.grey),
+                        ),
+                        keyboardType: TextInputType.multiline,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.send, color: Colors.blue),
+                      onPressed: () {
+                        _addComment(onSuccess: () {
+                          setState(() {}); // Refresh the dialog content
+                        });
+                      },
+                    ),
+                  ],
                 ),
               ],
             ),
-          ],
+          ),
         ),
-      ),
+        // Divider between posts
+        const Divider(
+          color: Colors.grey,
+          height: 20,
+          thickness: 1,
+          indent: 20,
+          endIndent: 20,
+        ),
+      ],
     );
   }
 
-  void _showCommentDialog(Post post) {
-    if (post.img != null) {
-      _showImageCommentDialog(post);
-    } else {
-      _showTextCommentDialog(post);
-    }
-  }
-
-  void _showImageCommentDialog(Post post) {
+  void _showTextCommentDialog(Post post) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
-        content: SizedBox(
-          width: MediaQuery.of(context).size.width * 0.8,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                flex: 1,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: Image.network(
-                    post.img!,
-                    fit: BoxFit.cover,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                flex: 2,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+          content: StatefulBuilder(
+            builder: (context, setDialogState) {
+              return SizedBox(
+                width: MediaQuery.of(context).size.width * 0.5,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Row(
                       children: [
@@ -432,234 +405,169 @@ class _PostCardState extends State<PostCard> {
                     Text(
                       post.text,
                       style: GoogleFonts.poppins(
-                        fontSize: 14,
+                        fontSize: 16,
                         color: Colors.grey[700],
                       ),
                     ),
                     const Divider(),
                     _buildCommentsSection(post),
                     const Divider(),
-                    _buildBottomSection(post),
+                    _buildBottomSection(post, () {
+                      setDialogState(() {}); // Refresh the dialog state
+                    }),
                   ],
                 ),
-              ),
-            ],
+              );
+            },
           ),
-        ),
-        actions: [
-          SizedBox(
-            width: 100,
-            child: MyButton(onTap: () => Navigator.pop(context), str: 'Close'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showTextCommentDialog(Post post) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
-        content: SizedBox(
-          width: MediaQuery.of(context).size.width * 0.5,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                children: [
-                  CircleAvatar(
-                    backgroundImage: post.user.profileImg.isNotEmpty
-                        ? NetworkImage(post.user.profileImg)
-                        : const AssetImage('assets/images/placeholder.png')
-                            as ImageProvider,
-                    radius: 25,
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    post.user.username,
-                    style: GoogleFonts.poppins(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                post.text,
-                style: GoogleFonts.poppins(
-                  fontSize: 14,
-                  color: Colors.grey[700],
-                ),
-              ),
-              const Divider(),
-              _buildCommentsSection(post),
-              const Divider(),
-              _buildBottomSection(post),
-            ],
-          ),
-        ),
-        actions: [
-          SizedBox(
-            width: 100,
-            child: MyButton(onTap: () => Navigator.pop(context), str: 'Close'),
-          ),
-        ],
-      ),
+          actions: [
+            SizedBox(
+              width: 100,
+              child:
+                  MyButton(onTap: () => Navigator.pop(context), str: 'Close'),
+            ),
+          ],
+        );
+      },
     );
   }
 
   Widget _buildCommentsSection(Post post) {
-    return post.comments.isNotEmpty
-        ? SizedBox(
-            height: 200, // Limit comment list height
-            child: ListView.separated(
-              shrinkWrap: true,
-              physics: const BouncingScrollPhysics(),
-              itemCount: post.comments.length,
-              separatorBuilder: (_, __) => const Divider(height: 10),
-              itemBuilder: (context, index) {
-                final comment = post.comments[index];
-                return Row(
-                  children: [
-                    CircleAvatar(
-                      backgroundImage: const AssetImage(
-                        'assets/images/placeholder.png',
+  return post.comments.isNotEmpty
+      ? LayoutBuilder(
+          builder: (context, constraints) {
+            // Calculate the dynamic height based on the number of comments
+            double dynamicHeight = post.comments.length * 40.0; // Approx. height per comment
+            double maxHeight = 200; // Set the maximum height for the section
+
+            return SizedBox(
+              height: dynamicHeight > maxHeight ? maxHeight : dynamicHeight, // Use dynamic height or maxHeight
+              child: ListView.separated(
+                shrinkWrap: true,
+                physics: const BouncingScrollPhysics(),
+                itemCount: post.comments.length,
+                separatorBuilder: (_, __) => const Divider(height: 10),
+                itemBuilder: (context, index) {
+                  final comment = post.comments[index];
+                  return Row(
+                    children: [
+                      CircleAvatar(
+                        backgroundImage: const AssetImage(
+                          'assets/images/placeholder.png',
+                        ),
+                        radius: 15,
                       ),
-                      radius: 15,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            comment.user.username,
-                            style: GoogleFonts.poppins(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                              color: Colors.black,
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              comment.user.username,
+                              style: GoogleFonts.poppins(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                color: Colors.black,
+                              ),
                             ),
-                          ),
-                          Text(
-                            comment.text,
-                            style: GoogleFonts.poppins(
-                              fontSize: 12,
-                              color: Colors.grey[700],
+                            Text(
+                              comment.text,
+                              style: GoogleFonts.poppins(
+                                fontSize: 12,
+                                color: Colors.grey[700],
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
-                );
-              },
-            ),
-          )
-        : Center(
-            child: Text(
-              'No comments yet.',
-              style: GoogleFonts.poppins(
-                fontSize: 14,
-                color: Colors.grey[700],
+                    ],
+                  );
+                },
               ),
+            );
+          },
+        )
+      : Center(
+          child: Text(
+            'No comments yet.',
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              color: Colors.grey[700],
             ),
-          );
-  }
+          ),
+        );
+}
 
-  Widget _buildBottomSection(Post post) {
-    // Helper to format time ago
-    String formatTimeAgo(DateTime dateTime) {
-      final Duration diff = DateTime.now().difference(dateTime);
 
-      if (diff.inDays >= 1) {
-        return '${diff.inDays} day${diff.inDays > 1 ? 's' : ''} ago';
-      } else if (diff.inHours >= 1) {
-        return '${diff.inHours} hour${diff.inHours > 1 ? 's' : ''} ago';
-      } else if (diff.inMinutes >= 1) {
-        return '${diff.inMinutes} minute${diff.inMinutes > 1 ? 's' : ''} ago';
-      } else {
-        return 'Just now';
-      }
-    }
-
+  Widget _buildBottomSection(Post post, void Function() setDialogState) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
             IconButton(
-              icon: const Icon(Icons.favorite, color: Colors.red),
-              onPressed: () {
-                // Handle like functionality
-              },
-            ),
-            Text(
-              '${post.likes.length} Likes',
-              style: GoogleFonts.poppins(
-                fontSize: 14,
-                color: Colors.black,
+              icon: Icon(
+                post.likes.contains(widget.profile['_id'])
+                    ? Icons.favorite
+                    : Icons.favorite_border,
+                color: post.likes.contains(widget.profile['_id'])
+                    ? Colors.red
+                    : Colors.black,
               ),
-            ),
-            const Spacer(),
-            IconButton(
-              icon: const Icon(Icons.comment, color: Colors.grey),
               onPressed: () {
-                // Handle comment functionality
+                _toggleLike(onSuccess: setDialogState);
               },
             ),
+            if (post.likes.isNotEmpty)
+              FutureBuilder<String?>(
+                future:
+                    getLikedByFollower(post.likes, widget.profile['followers']),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return Text(
+                      'Loading likes...',
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        color: Colors.grey[700],
+                      ),
+                    );
+                  }
+                  if (snapshot.hasError) {
+                    return Text(
+                      'Error loading likes',
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        color: Colors.grey[700],
+                      ),
+                    );
+                  }
+
+                  final likedByFollower = snapshot.data;
+                  if (likedByFollower != null) {
+                    return Text(
+                      'Liked by $likedByFollower ${post.likes.length - 1 == 0 ? '.' : 'and ${post.likes.length - 1} others}'}',
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        color: Colors.grey[700],
+                      ),
+                    );
+                  } else {
+                    return Text(
+                      'Liked by ${post.likes.length} ${post.likes.length == 1 ? 'person' : {
+                          post.likes.length == 0 ? '.' : 'people'
+                        }}',
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        color: Colors.grey[700],
+                      ),
+                    );
+                  }
+                },
+              ),
           ],
         ),
-        if (post.likes.isNotEmpty)
-          FutureBuilder<String?>(
-            future: getLikedByFollower(post.likes, widget.profile['followers']),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return Text(
-                  'Loading likes...',
-                  style: GoogleFonts.poppins(
-                    fontSize: 12,
-                    color: Colors.grey[700],
-                  ),
-                );
-              }
-              if (snapshot.hasError) {
-                return Text(
-                  'Error loading likes',
-                  style: GoogleFonts.poppins(
-                    fontSize: 12,
-                    color: Colors.grey[700],
-                  ),
-                );
-              }
-
-              final likedByFollower = snapshot.data;
-              if (likedByFollower != null) {
-                return Text(
-                  'Liked by $likedByFollower and ${post.likes.length - 1} others',
-                  style: GoogleFonts.poppins(
-                    fontSize: 12,
-                    color: Colors.grey[700],
-                  ),
-                );
-              } else {
-                return Text(
-                  'Liked by ${post.likes.length} ${post.likes.length == 1 ? 'person' : 'people'}',
-                  style: GoogleFonts.poppins(
-                    fontSize: 12,
-                    color: Colors.grey[700],
-                  ),
-                );
-              }
-            },
-          ),
         Text(
-          'Posted ${formatTimeAgo(post.createdAt)}', // Format the post's creation time
+          'Posted ${_formatPostDate(post.createdAt)}',
           style: GoogleFonts.poppins(
             fontSize: 12,
             color: Colors.grey[700],
@@ -689,7 +597,7 @@ class _PostCardState extends State<PostCard> {
             IconButton(
               icon: const Icon(Icons.send, color: Colors.blue),
               onPressed: () {
-                _addComment();
+                _addComment(onSuccess: setDialogState);
               },
             ),
           ],

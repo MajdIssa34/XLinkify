@@ -5,10 +5,10 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:x_frontend/models/post.model.dart';
 import 'package:x_frontend/services/post_service.dart';
-import 'package:x_frontend/widgets/my_text_field.dart'; // Assuming you have a custom text field widget
-import 'package:x_frontend/widgets/post_card.dart'; // Assuming you have a custom post card widget
+import 'package:x_frontend/widgets/my_button.dart';
+import 'package:x_frontend/widgets/my_text_field.dart';
+import 'package:x_frontend/widgets/post_card.dart';
 import 'package:x_frontend/widgets/snack_bar.dart';
-
 
 class FeedScreen extends StatefulWidget {
   final Map<String, dynamic> profile;
@@ -27,7 +27,7 @@ class _FeedScreenState extends State<FeedScreen> {
   @override
   void initState() {
     super.initState();
-    _posts = _postService.getAllPosts(); // Fetch posts on screen load
+    _posts = _postService.getAllPosts();
   }
 
   Future<void> _createPost() async {
@@ -50,11 +50,10 @@ class _FeedScreenState extends State<FeedScreen> {
         isError: false,
       );
 
-      // Refresh the posts
       setState(() {
-        _posts = _postService.getAllPosts(); // Fetch updated posts
-        _selectedImage = null; // Clear the selected image
-        _textController.clear(); // Clear the text input
+        _posts = _postService.getAllPosts();
+        _selectedImage = null;
+        _textController.clear();
       });
     } catch (error) {
       SnackBarUtil.showCustomSnackBar(
@@ -84,49 +83,114 @@ class _FeedScreenState extends State<FeedScreen> {
         children: [
           Container(
             padding: const EdgeInsets.all(16),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-            ),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  backgroundImage: widget.profile['profileImg'].isNotEmpty
-                      ? NetworkImage(widget.profile['profileImg'])
-                      : const AssetImage('assets/images/placeholder.png')
-                          as ImageProvider,
-                  radius: 25,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: MyTextField(
-                    controller: _textController,
-                    hintText: Text("What's on your mind...",
-                        style: GoogleFonts.poppins(color: Colors.white)),
-                    keyboardType: TextInputType.multiline,
+            color: Colors.white,
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(10),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Colors.grey,
+                    blurRadius: 2,
+                    offset: Offset(0, 2),
                   ),
-                ),
-                IconButton(
-                  icon: const Icon(
-                    Icons.add_a_photo,
-                    color: Colors.black,
+                ],
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        backgroundImage: widget.profile['profileImg'].isNotEmpty
+                            ? NetworkImage(widget.profile['profileImg'])
+                            : const AssetImage('assets/images/placeholder.png')
+                                as ImageProvider,
+                        radius: 25,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: MyTextField(
+                          controller: _textController,
+                          hintText: Text(
+                            "What's on your mind...",
+                            style: GoogleFonts.poppins(color: Colors.grey),
+                          ),
+                          keyboardType: TextInputType.multiline,
+                        ),
+                      ),
+                    ],
                   ),
-                  onPressed: _pickImage,
-                ),
-                IconButton(
-                  icon: const Icon(
-                    Icons.send,
-                    color: Colors.black,
+                  if (_selectedImage != null)
+                    Column(
+                      children: [
+                        const SizedBox(height: 12),
+                        Stack(
+                          children: [
+                            Container(
+                              width: double.infinity,
+                              height: 150,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: Colors.grey.shade300,
+                                  width: 1,
+                                ),
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(10),
+                                child: Image.memory(
+                                  _selectedImage!,
+                                  fit: BoxFit.contain,
+                                ),
+                              ),
+                            ),
+                            Positioned(
+                              top: 5,
+                              right: 5,
+                              child: CircleAvatar(
+                                radius: 15,
+                                backgroundColor: Colors.black.withOpacity(0.7),
+                                child: IconButton(
+                                  padding: EdgeInsets.zero,
+                                  icon: const Icon(
+                                    Icons.close,
+                                    color: Colors.white,
+                                    size: 16,
+                                  ),
+                                  onPressed: () {
+                                    setState(() {
+                                      _selectedImage = null;
+                                    });
+                                  },
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      SizedBox(
+                        width: 150,
+                        child: MyButton(onTap: _pickImage, str: "Add Photo"),
+                      ),
+                      SizedBox(
+                        width: 150,
+                        child: MyButton(onTap: _createPost, str: "Post"),
+                      ),
+                    ],
                   ),
-                  onPressed: _createPost,
-                ),
-              ],
+                ],
+              ),
             ),
           ),
           Expanded(
             child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white
-              ),
+              decoration: const BoxDecoration(color: Colors.white),
               child: FutureBuilder<List<Post>>(
                 future: _posts,
                 builder: (context, snapshot) {
@@ -170,5 +234,4 @@ class _FeedScreenState extends State<FeedScreen> {
       ),
     );
   }
-
 }

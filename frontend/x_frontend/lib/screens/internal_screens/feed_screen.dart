@@ -33,17 +33,28 @@ class _FeedScreenState extends State<FeedScreen> {
   Future<void> _createPost() async {
     final text = _textController.text.trim();
 
-    if (text.isEmpty && _selectedImage == null) {
+    // Enforce that an image is required for every post
+    if (_selectedImage == null) {
       SnackBarUtil.showCustomSnackBar(
         context,
-        'Please add some text or an image',
+        'Please add an image to your post.',
         isError: true,
       );
       return;
     }
 
+    // Show the loading indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(),
+      ),
+    );
+
     try {
       await _postService.createPost(text, _selectedImage);
+
       SnackBarUtil.showCustomSnackBar(
         context,
         'Post created successfully!',
@@ -61,6 +72,8 @@ class _FeedScreenState extends State<FeedScreen> {
         'Error: ${error.toString()}',
         isError: true,
       );
+    } finally {
+      Navigator.pop(context); // Dismiss the loading dialog
     }
   }
 
@@ -69,10 +82,29 @@ class _FeedScreenState extends State<FeedScreen> {
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
 
     if (pickedFile != null) {
-      final bytes = await pickedFile.readAsBytes();
-      setState(() {
-        _selectedImage = bytes;
-      });
+      // Show a loading indicator while processing the image
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+
+      try {
+        final bytes = await pickedFile.readAsBytes();
+        setState(() {
+          _selectedImage = bytes;
+        });
+      } catch (error) {
+        SnackBarUtil.showCustomSnackBar(
+          context,
+          'Error picking image: ${error.toString()}',
+          isError: true,
+        );
+      } finally {
+        Navigator.pop(context); // Dismiss the loading dialog
+      }
     }
   }
 
@@ -102,7 +134,12 @@ class _FeedScreenState extends State<FeedScreen> {
                   Row(
                     children: [
                       CircleAvatar(
-                        backgroundImage: widget.profile['profileImg'].isNotEmpty
+                        backgroundImage: (widget.profile['profileImg'] !=
+                                    null &&
+                                widget.profile['profileImg'].isNotEmpty &&
+                                Uri.tryParse(widget.profile['profileImg'])
+                                        ?.hasAbsolutePath ==
+                                    true)
                             ? NetworkImage(widget.profile['profileImg'])
                             : const AssetImage('assets/images/placeholder.png')
                                 as ImageProvider,
@@ -113,7 +150,7 @@ class _FeedScreenState extends State<FeedScreen> {
                         child: MyTextField(
                           controller: _textController,
                           hintText: Text(
-                            "What's on your mind...",
+                            "What's on your mind? Add text and a photo...",
                             style: GoogleFonts.poppins(color: Colors.grey),
                           ),
                           keyboardType: TextInputType.multiline,

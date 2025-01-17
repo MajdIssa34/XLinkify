@@ -42,14 +42,7 @@ app.use(cookieParser());
 
 // Configure CORS
 const allowedOrigins = [
-    "http://localhost:49167", // Add your Flutter app's origin
-    "http://localhost:58335",
-    "http://localhost:62461",
-    "http://localhost:63463",
-    "http://localhost:50399",
-    "http://localhost:56859",
-    "http://localhost:63651",
-    "http://localhost:49904"
+    "http://localhost:63521"
 ];
 
 app.use("/api/auth", authRoutes);

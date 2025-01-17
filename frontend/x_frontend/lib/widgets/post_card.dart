@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:x_frontend/models/post.model.dart';
+import 'package:x_frontend/services/post_service.dart';
 import 'package:x_frontend/services/user_service.dart';
 import 'package:x_frontend/widgets/my_button.dart';
-import 'package:x_frontend/widgets/my_text_field.dart';
-import 'package:x_frontend/services/post_service.dart';
 import 'package:x_frontend/widgets/snack_bar.dart';
 
 class PostCard extends StatefulWidget {
@@ -99,6 +98,12 @@ class _PostCardState extends State<PostCard> {
   @override
   Widget build(BuildContext context) {
     final post = widget.post;
+
+    // Enforce that every post must have an image
+    if (post.img == null || post.img!.isEmpty) {
+      throw Exception("Each post must have an image.");
+    }
+
     return Column(
       children: [
         Card(
@@ -155,18 +160,20 @@ class _PostCardState extends State<PostCard> {
                       ],
                     ),
                     widget.profile['_id'] == post.user.id
-                        ? MyButton(
-                            onTap: () async {
-                              if (widget.profile['_id'] == post.user.id) {
+                        ? PopupMenuButton<String>(
+                            icon: const Icon(Icons.more_vert),
+                            onSelected: (value) async {
+                              if (value == 'delete') {
                                 final confirmed = await showDialog<bool>(
                                   context: context,
                                   builder: (context) => AlertDialog(
                                     title: const Text('Delete Post'),
                                     content: Text(
-                                        'Are you sure you want to delete this post?',
-                                        style: GoogleFonts.poppins(
-                                          color: Colors.black,
-                                        )),
+                                      'Are you sure you want to delete this post?',
+                                      style: GoogleFonts.poppins(
+                                        color: Colors.black,
+                                      ),
+                                    ),
                                     actions: [
                                       TextButton(
                                         onPressed: () =>
@@ -177,10 +184,11 @@ class _PostCardState extends State<PostCard> {
                                       SizedBox(
                                         width: 100,
                                         child: MyButton(
-                                            onTap: () =>
-                                                Navigator.pop(context, true),
-                                            str: "Delete"),
-                                      )
+                                          onTap: () =>
+                                              Navigator.pop(context, true),
+                                          str: "Delete",
+                                        ),
+                                      ),
                                     ],
                                   ),
                                 );
@@ -204,55 +212,45 @@ class _PostCardState extends State<PostCard> {
                                     );
                                   }
                                 }
-                              } else {
-                                SnackBarUtil.showCustomSnackBar(
-                                  context,
-                                  'You can only delete your own posts',
-                                  isError: true,
-                                );
                               }
                             },
-                            str: "Delete",
+                            itemBuilder: (BuildContext context) => [
+                              PopupMenuItem(
+                                value: 'delete',
+                                child: Text(
+                                  'Delete',
+                                  style: GoogleFonts.poppins(),
+                                ),
+                              ),
+                            ],
                           )
                         : const SizedBox(),
                   ],
                 ),
                 const SizedBox(height: 12),
-                if (post.img != null)
-                  Center(
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(10),
+                Center(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: SizedBox(
+                      width: 300,
+                      height: 300,
                       child: Image.network(
                         post.img!,
                         fit: BoxFit.cover,
                       ),
                     ),
                   ),
-                // Username and post text above likes and comments if there's no image
-                if (post.img == null)
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '${post.user.username} ',
-                        style: GoogleFonts.poppins(
-                          color: Colors.black,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
+                ),
+                if (post.text.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8.0),
+                    child: Text(
+                      post.text,
+                      style: GoogleFonts.poppins(
+                        color: Colors.black,
+                        fontSize: 16,
                       ),
-                      Expanded(
-                        child: Text(
-                          '${post.text}',
-                          style: GoogleFonts.poppins(
-                            color: Colors.black,
-                            fontSize: 16,
-                          ),
-                          overflow: TextOverflow.clip,
-                          softWrap: true,
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 Row(
                   children: [
@@ -276,83 +274,52 @@ class _PostCardState extends State<PostCard> {
                       ),
                     ),
                     const SizedBox(width: 16),
-                    IconButton(
-                      icon: const Icon(Icons.comment, color: Colors.black),
-                      onPressed: () {
+                    GestureDetector(
+                      onTap: () {
                         _showTextCommentDialog(post);
                       },
-                    ),
-                    Text(
-                      '${post.comments.length} Comments',
-                      style: GoogleFonts.poppins(
-                        color: Colors.black,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ],
-                ),
-                // Username and post text below likes and comments if there's an image
-                if (post.img != null)
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 2),
-                      Text(
-                        '${post.user.username} ',
+                      child: Text(
+                        'Show all ${post.comments.length} comments',
                         style: GoogleFonts.poppins(
-                          color: Colors.black,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
+                          color: Colors.grey,
+                          fontSize: 14,
+                          fontStyle: FontStyle.italic,
                         ),
                       ),
-                      Expanded(
-                        child: Text(
-                          '${post.text}',
-                          style: GoogleFonts.poppins(
-                            color: Colors.black,
-                            fontSize: 16,
-                          ),
-                          overflow: TextOverflow.clip,
-                          softWrap: true,
-                        ),
-                      ),
-                    ],
-                  ),
-                Row(
-                  children: [
-                    CircleAvatar(
-                      backgroundImage: widget.profile['profileImg'].isNotEmpty
-                          ? NetworkImage(widget.profile['profileImg'])
-                          : const AssetImage('assets/images/placeholder.png')
-                              as ImageProvider,
-                      radius: 15,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: MyTextField(
-                        controller: _commentController,
-                        hintText: Text(
-                          'Add a comment...',
-                          style: GoogleFonts.poppins(color: Colors.grey),
-                        ),
-                        keyboardType: TextInputType.multiline,
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.send, color: Colors.blue),
-                      onPressed: () {
-                        _addComment(onSuccess: () {
-                          setState(() {}); // Refresh the dialog content
-                        });
-                      },
                     ),
                   ],
+                 
                 ),
+                Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _commentController,
+                      decoration: InputDecoration(
+                        hintText: 'Add a comment...',
+                        hintStyle: GoogleFonts.poppins(color: Colors.grey),
+                        border: InputBorder.none,
+                        contentPadding:
+                            const EdgeInsets.symmetric(horizontal: 8),
+                      ),
+                      style: GoogleFonts.poppins(color: Colors.black),
+                      keyboardType: TextInputType.multiline,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.send, color: Colors.blue),
+                    onPressed: () {
+                      _addComment(onSuccess: () {
+                        setState(() {}); // Refresh the dialog content
+                      });
+                    },
+                  ),
+                ],
+              ),
               ],
             ),
           ),
         ),
-        // Divider between posts
         const Divider(
           color: Colors.grey,
           height: 20,
@@ -433,71 +400,73 @@ class _PostCardState extends State<PostCard> {
   }
 
   Widget _buildCommentsSection(Post post) {
-  return post.comments.isNotEmpty
-      ? LayoutBuilder(
-          builder: (context, constraints) {
-            // Calculate the dynamic height based on the number of comments
-            double dynamicHeight = post.comments.length * 40.0; // Approx. height per comment
-            double maxHeight = 200; // Set the maximum height for the section
+    return post.comments.isNotEmpty
+        ? LayoutBuilder(
+            builder: (context, constraints) {
+              // Calculate the dynamic height based on the number of comments
+              double dynamicHeight =
+                  post.comments.length * 40.0; // Approx. height per comment
+              double maxHeight = 200; // Set the maximum height for the section
 
-            return SizedBox(
-              height: dynamicHeight > maxHeight ? maxHeight : dynamicHeight, // Use dynamic height or maxHeight
-              child: ListView.separated(
-                shrinkWrap: true,
-                physics: const BouncingScrollPhysics(),
-                itemCount: post.comments.length,
-                separatorBuilder: (_, __) => const Divider(height: 10),
-                itemBuilder: (context, index) {
-                  final comment = post.comments[index];
-                  return Row(
-                    children: [
-                      CircleAvatar(
-                        backgroundImage: const AssetImage(
-                          'assets/images/placeholder.png',
+              return SizedBox(
+                height: dynamicHeight > maxHeight
+                    ? maxHeight
+                    : dynamicHeight, // Use dynamic height or maxHeight
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  physics: const BouncingScrollPhysics(),
+                  itemCount: post.comments.length,
+                  separatorBuilder: (_, __) => const Divider(height: 10),
+                  itemBuilder: (context, index) {
+                    final comment = post.comments[index];
+                    return Row(
+                      children: [
+                        CircleAvatar(
+                          backgroundImage: const AssetImage(
+                            'assets/images/placeholder.png',
+                          ),
+                          radius: 15,
                         ),
-                        radius: 15,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              comment.user.username,
-                              style: GoogleFonts.poppins(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                                color: Colors.black,
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                comment.user.username,
+                                style: GoogleFonts.poppins(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                  color: Colors.black,
+                                ),
                               ),
-                            ),
-                            Text(
-                              comment.text,
-                              style: GoogleFonts.poppins(
-                                fontSize: 12,
-                                color: Colors.grey[700],
+                              Text(
+                                comment.text,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 12,
+                                  color: Colors.grey[700],
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
-                  );
-                },
+                      ],
+                    );
+                  },
+                ),
+              );
+            },
+          )
+        : Center(
+            child: Text(
+              'No comments yet.',
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                color: Colors.grey[700],
               ),
-            );
-          },
-        )
-      : Center(
-          child: Text(
-            'No comments yet.',
-            style: GoogleFonts.poppins(
-              fontSize: 14,
-              color: Colors.grey[700],
             ),
-          ),
-        );
-}
-
+          );
+  }
 
   Widget _buildBottomSection(Post post, void Function() setDialogState) {
     return Column(
@@ -545,7 +514,7 @@ class _PostCardState extends State<PostCard> {
                   final likedByFollower = snapshot.data;
                   if (likedByFollower != null) {
                     return Text(
-                      'Liked by $likedByFollower ${post.likes.length - 1 == 0 ? '.' : 'and ${post.likes.length - 1} others}'}',
+                      'Liked by $likedByFollower ${post.likes.length - 1 == 0 ? '.' : 'and ${post.likes.length - 1} others'}',
                       style: GoogleFonts.poppins(
                         fontSize: 12,
                         color: Colors.grey[700],
@@ -576,28 +545,25 @@ class _PostCardState extends State<PostCard> {
         const SizedBox(height: 8),
         Row(
           children: [
-            CircleAvatar(
-              backgroundImage: widget.profile['profileImg'].isNotEmpty
-                  ? NetworkImage(widget.profile['profileImg'])
-                  : const AssetImage('assets/images/placeholder.png')
-                      as ImageProvider,
-              radius: 15,
-            ),
-            const SizedBox(width: 8),
             Expanded(
-              child: MyTextField(
+              child: TextField(
                 controller: _commentController,
-                hintText: Text(
-                  'Add a comment...',
-                  style: GoogleFonts.poppins(color: Colors.grey),
+                decoration: InputDecoration(
+                  hintText: 'Add a comment...',
+                  hintStyle: GoogleFonts.poppins(color: Colors.grey),
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 8),
                 ),
+                style: GoogleFonts.poppins(color: Colors.black),
                 keyboardType: TextInputType.multiline,
               ),
             ),
             IconButton(
               icon: const Icon(Icons.send, color: Colors.blue),
               onPressed: () {
-                _addComment(onSuccess: setDialogState);
+                _addComment(onSuccess: () {
+                  setState(() {}); // Refresh the dialog content
+                });
               },
             ),
           ],

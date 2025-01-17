@@ -106,21 +106,55 @@ class PostService {
   }
 
   /// Delete a post by ID
-Future<void> deletePost(String postId) async {
-  final token = await FlutterSessionJwt.retrieveToken();
-  if (token == null) throw Exception('No token found.');
+  Future<void> deletePost(String postId) async {
+    final token = await FlutterSessionJwt.retrieveToken();
+    if (token == null) throw Exception('No token found.');
 
-  final url = Uri.parse("$baseUrl/$postId");
-  final response = await http.delete(
-    url,
-    headers: {
-      "Authorization": "Bearer $token",
-    },
-  );
+    final url = Uri.parse("$baseUrl/$postId");
+    final response = await http.delete(
+      url,
+      headers: {
+        "Authorization": "Bearer $token",
+      },
+    );
 
-  if (response.statusCode != 200) {
-    throw Exception('Failed to delete post: ${response.body}');
+    if (response.statusCode != 200) {
+      throw Exception('Failed to delete post: ${response.body}');
+    }
   }
-}
 
+  /// Fetch posts for a specific user by username
+  Future<List<Post>> getUserPosts(String username) async {
+    final token = await FlutterSessionJwt.retrieveToken(); // Retrieve the token
+    if (token == null) {
+      throw Exception('No token found. User not logged in.');
+    }
+
+    final url = Uri.parse("$baseUrl/user/$username");
+    final response = await http.get(
+      url,
+      headers: {"Authorization": "Bearer $token"}, // Include the token
+    );
+
+    if (response.statusCode == 200) {
+      final List<dynamic> jsonList =
+          jsonDecode(response.body); // Parse JSON into a list
+      return jsonList
+          .map((json) => Post.fromJson(json))
+          .toList(); // Convert each JSON to Post
+    } else {
+      final error =
+          jsonDecode(response.body)['error'] ?? 'Failed to fetch posts';
+      throw Exception(error);
+    }
+  }
+
+  Future<int> getUserPostsLength(String username) async {
+    try {
+      final posts = await getUserPosts(username);
+      return posts.length;
+    } catch (error) {
+      throw Exception('Failed to get user posts length: $error');
+    }
+  }
 }

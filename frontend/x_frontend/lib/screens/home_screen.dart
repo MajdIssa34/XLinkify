@@ -87,9 +87,13 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
 
-          // Main content (Feed) with 60% of the screen width
+          // Main content (Middle Screen)
           Flexible(
-            flex: screenWidth > 1300 ? 5 : 6, // 60%
+            flex: _selectedIndex == 0
+                ? (screenWidth > 1300 ? 5 : 6) // 60% when Feed is active
+                : (screenWidth > 1300
+                    ? 7
+                    : 8), // 80% for Profile or Notifications
             child: Container(
               color:
                   const Color.fromARGB(255, 214, 220, 233), // Background color
@@ -120,201 +124,205 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
 
-          // Suggested friends with 20% of the screen width
-          Flexible(
-            flex: screenWidth > 1300 ? 3 : 2, // 20%
-            child: Container(
-              color: const Color(0xFF1A1A2E),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Row(
-                      children: [
-                        CircleAvatar(
-                          radius: 25,
-                          backgroundImage: NetworkImage(
-                            "https://via.placeholder.com/150",
+          // Right-hand side (Suggested Friends)
+          if (_selectedIndex == 0) // Only show for Feed screen
+            Flexible(
+              flex: screenWidth > 1300 ? 3 : 2, // 20%
+              child: Container(
+                color: const Color(0xFF1A1A2E),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 25,
+                            backgroundImage: NetworkImage(
+                              widget.profile['profileImg'] ??
+                                  "https://via.placeholder.com/150",
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              widget.profile['username'] ?? '',
-                              style: GoogleFonts.poppins(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                            Text(
-                              widget.profile['fullName'] ?? '',
-                              style: GoogleFonts.poppins(
-                                fontSize: 14,
-                                color: Colors.grey,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  Divider(color: Colors.grey.shade800),
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          "Suggested for you",
-                          style: GoogleFonts.poppins(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Expanded(
-                    child: FutureBuilder<List<dynamic>>(
-                      future: _suggestedFriends,
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState ==
-                            ConnectionState.waiting) {
-                          return const Center(
-                            child: CircularProgressIndicator(),
-                          );
-                        } else if (snapshot.hasError) {
-                          return Center(
-                            child: Text(
-                              'Error: ${snapshot.error}',
-                              style: const TextStyle(color: Colors.red),
-                            ),
-                          );
-                        } else if (!snapshot.hasData ||
-                            snapshot.data!.isEmpty) {
-                          return Center(
-                            child: Text(
-                              'No suggested friends available',
-                              style:
-                                  GoogleFonts.poppins(fontSize: 16, color: Colors.white),
-                            ),
-                          );
-                        }
-
-                        final suggestedFriends = snapshot.data!;
-
-                        return ListView.builder(
-                          itemCount: suggestedFriends.length,
-                          itemBuilder: (context, index) {
-                            final friend = suggestedFriends[index];
-                            final hasImage = friend['profileImg'] != null &&
-                                friend['profileImg'].isNotEmpty;
-                            final username = friend['username'] ?? 'Unknown';
-                            final followers = friend['followers'] ?? [];
-
-                            return Card(
-                              color: const Color(0xFF2A2A3E),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              margin: const EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 8),
-                              child: Padding(
-                                padding: const EdgeInsets.all(12.0),
-                                child: Row(
-                                  children: [
-                                    CircleAvatar(
-                                      radius: 25,
-                                      backgroundImage: hasImage
-                                          ? NetworkImage(friend['profileImg']!)
-                                          : const AssetImage(
-                                                  'assets/images/placeholder.png')
-                                              as ImageProvider,
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            username,
-                                            style: GoogleFonts.poppins(
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.bold,
-                                              color: Colors.white,
-                                            ),
-                                          ),
-                                          Text(
-                                            followers.isNotEmpty
-                                                ? "Followed by ${followers[0]}"
-                                                : "No followers yet",
-                                            style: GoogleFonts.poppins(
-                                              fontSize: 14,
-                                              color: Colors.grey.shade400,
-                                            ),
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    ElevatedButton(
-                                      onPressed: () async {
-                                        try {
-                                          await _userService
-                                              .followUser(friend['_id']);
-                                          setState(() {
-                                            suggestedFriends.removeAt(index);
-                                          });
-                                          SnackBarUtil.showCustomSnackBar(
-                                              context, 'Followed $username!');
-                                        } catch (error) {
-                                          SnackBarUtil.showCustomSnackBar(
-                                              context,
-                                              'Failed to follow $username: $error',
-                                              isError: true);
-                                        }
-                                      },
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.blue,
-                                        foregroundColor: Colors.white,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(20),
-                                        ),
-                                      ),
-                                      child: const Text("Follow"),
-                                    ),
-                                  ],
+                          const SizedBox(width: 12),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                widget.profile['username'] ?? '',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
                                 ),
                               ),
-                            );
-                          },
-                        );
-                      },
+                              Text(
+                                widget.profile['fullName'] ?? '',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 14,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Center(
-                      child: Text(
-                        '© 2025 Linkify by Majd',
-                        style: GoogleFonts.poppins(
-                          fontSize: 12,
-                          color: Colors.grey.shade500,
+                    Divider(color: Colors.grey.shade800),
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            "Suggested for you",
+                            style: GoogleFonts.poppins(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: FutureBuilder<List<dynamic>>(
+                        future: _suggestedFriends,
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState ==
+                              ConnectionState.waiting) {
+                            return const Center(
+                              child: CircularProgressIndicator(),
+                            );
+                          } else if (snapshot.hasError) {
+                            return Center(
+                              child: Text(
+                                'Error: ${snapshot.error}',
+                                style: const TextStyle(color: Colors.red),
+                              ),
+                            );
+                          } else if (!snapshot.hasData ||
+                              snapshot.data!.isEmpty) {
+                            return Center(
+                              child: Text(
+                                'No suggested friends available',
+                                style: GoogleFonts.poppins(
+                                    fontSize: 16, color: Colors.white),
+                                textAlign: TextAlign.center,
+                              ),
+                            );
+                          }
+
+                          final suggestedFriends = snapshot.data!;
+
+                          return ListView.builder(
+                            itemCount: suggestedFriends.length,
+                            itemBuilder: (context, index) {
+                              final friend = suggestedFriends[index];
+                              final hasImage = friend['profileImg'] != null &&
+                                  friend['profileImg'].isNotEmpty;
+                              final username = friend['username'] ?? 'Unknown';
+                              final followers = friend['followers'] ?? [];
+
+                              return Card(
+                                color: const Color(0xFF2A2A3E),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                margin: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 8),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(12.0),
+                                  child: Row(
+                                    children: [
+                                      CircleAvatar(
+                                        radius: 25,
+                                        backgroundImage: hasImage
+                                            ? NetworkImage(
+                                                friend['profileImg']!)
+                                            : const AssetImage(
+                                                    'assets/images/placeholder.png')
+                                                as ImageProvider,
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              username,
+                                              style: GoogleFonts.poppins(
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                            Text(
+                                              followers.isNotEmpty
+                                                  ? "Followed by ${followers[0]}"
+                                                  : "No followers yet",
+                                              style: GoogleFonts.poppins(
+                                                fontSize: 14,
+                                                color: Colors.grey.shade400,
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      ElevatedButton(
+                                        onPressed: () async {
+                                          try {
+                                            await _userService
+                                                .followUser(friend['_id']);
+                                            setState(() {
+                                              suggestedFriends.removeAt(index);
+                                            });
+                                            SnackBarUtil.showCustomSnackBar(
+                                                context, 'Followed $username!');
+                                          } catch (error) {
+                                            SnackBarUtil.showCustomSnackBar(
+                                                context,
+                                                'Failed to follow $username: $error',
+                                                isError: true);
+                                          }
+                                        },
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.blue,
+                                          foregroundColor: Colors.white,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(20),
+                                          ),
+                                        ),
+                                        child: const Text("Follow"),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Center(
+                        child: Text(
+                          '© 2025 Linkify by Majd',
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            color: Colors.grey.shade500,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
         ],
       ),
     );

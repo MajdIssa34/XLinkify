@@ -42,7 +42,8 @@ app.use(cookieParser());
 
 // Configure CORS
 const allowedOrigins = [
-    "http://localhost:63521"
+    "http://localhost:63521",
+    "http://localhost:55910"
 ];
 
 app.use("/api/auth", authRoutes);

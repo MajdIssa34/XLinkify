@@ -31,8 +31,8 @@ class _HomeScreenState extends State<HomeScreen> {
         profile: widget.profile,
       ), // Index 0: Feed Screen
       ProfileScreen(profile: widget.profile), // Index 1: Profile Screen
-      NotificationsScreen(
-          profile: widget.profile), // Index 2: Notifications Screen
+      // NotificationsScreen(
+      //     profile: widget.profile), // Index 2: Notifications Screen
     ];
     // Fetch suggested friends
     _suggestedFriends = _userService.getSuggestedUsers();
@@ -41,6 +41,24 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
+
+    // Check for smaller screens
+    if (screenWidth < 1300) {
+      return Scaffold(
+        backgroundColor: Colors.black,
+        body: Center(
+          child: Text(
+            'Sorry, this application is best experienced on larger devices.\nTry using a bigger screen!',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.poppins(
+              fontSize: 18,
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
       body: Row(
@@ -65,7 +83,6 @@ class _HomeScreenState extends State<HomeScreen> {
                       const SizedBox(height: 20),
                       _buildNavItem(Icons.home, 'Feed', 0),
                       _buildNavItem(Icons.person, 'Profile', 1),
-                      _buildNavItem(Icons.notifications, 'Notifications', 2),
                     ],
                   ),
                   Padding(
@@ -86,7 +103,6 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
           ),
-
           // Main content (Middle Screen)
           Flexible(
             flex: _selectedIndex == 0
@@ -123,7 +139,6 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
           ),
-
           // Right-hand side (Suggested Friends)
           if (_selectedIndex == 0) // Only show for Feed screen
             Flexible(
@@ -185,140 +200,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         ],
                       ),
                     ),
-                    Expanded(
-                      child: FutureBuilder<List<dynamic>>(
-                        future: _suggestedFriends,
-                        builder: (context, snapshot) {
-                          if (snapshot.connectionState ==
-                              ConnectionState.waiting) {
-                            return const Center(
-                              child: CircularProgressIndicator(),
-                            );
-                          } else if (snapshot.hasError) {
-                            return Center(
-                              child: Text(
-                                'Error: ${snapshot.error}',
-                                style: const TextStyle(color: Colors.red),
-                              ),
-                            );
-                          } else if (!snapshot.hasData ||
-                              snapshot.data!.isEmpty) {
-                            return Center(
-                              child: Text(
-                                'No suggested friends available',
-                                style: GoogleFonts.poppins(
-                                    fontSize: 16, color: Colors.white),
-                                textAlign: TextAlign.center,
-                              ),
-                            );
-                          }
-
-                          final suggestedFriends = snapshot.data!;
-
-                          return ListView.builder(
-                            itemCount: suggestedFriends.length,
-                            itemBuilder: (context, index) {
-                              final friend = suggestedFriends[index];
-                              final hasImage = friend['profileImg'] != null &&
-                                  friend['profileImg'].isNotEmpty;
-                              final username = friend['username'] ?? 'Unknown';
-                              final followers = friend['followers'] ?? [];
-
-                              return Card(
-                                color: const Color(0xFF2A2A3E),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                margin: const EdgeInsets.symmetric(
-                                    horizontal: 12, vertical: 8),
-                                child: Padding(
-                                  padding: const EdgeInsets.all(12.0),
-                                  child: Row(
-                                    children: [
-                                      CircleAvatar(
-                                        radius: 25,
-                                        backgroundImage: hasImage
-                                            ? NetworkImage(
-                                                friend['profileImg']!)
-                                            : const AssetImage(
-                                                    'assets/images/placeholder.png')
-                                                as ImageProvider,
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              username,
-                                              style: GoogleFonts.poppins(
-                                                fontSize: 16,
-                                                fontWeight: FontWeight.bold,
-                                                color: Colors.white,
-                                              ),
-                                            ),
-                                            Text(
-                                              followers.isNotEmpty
-                                                  ? "Followed by ${followers[0]}"
-                                                  : "No followers yet",
-                                              style: GoogleFonts.poppins(
-                                                fontSize: 14,
-                                                color: Colors.grey.shade400,
-                                              ),
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      ElevatedButton(
-                                        onPressed: () async {
-                                          try {
-                                            await _userService
-                                                .followUser(friend['_id']);
-                                            setState(() {
-                                              suggestedFriends.removeAt(index);
-                                            });
-                                            SnackBarUtil.showCustomSnackBar(
-                                                context, 'Followed $username!');
-                                          } catch (error) {
-                                            SnackBarUtil.showCustomSnackBar(
-                                                context,
-                                                'Failed to follow $username: $error',
-                                                isError: true);
-                                          }
-                                        },
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: Colors.blue,
-                                          foregroundColor: Colors.white,
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(20),
-                                          ),
-                                        ),
-                                        child: const Text("Follow"),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              );
-                            },
-                          );
-                        },
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Center(
-                        child: Text(
-                          '© 2025 Linkify by Majd',
-                          style: GoogleFonts.poppins(
-                            fontSize: 12,
-                            color: Colors.grey.shade500,
-                          ),
-                        ),
-                      ),
-                    ),
+                    // Suggested Friends List
+                    // (Keep your suggested friends logic here)
                   ],
                 ),
               ),

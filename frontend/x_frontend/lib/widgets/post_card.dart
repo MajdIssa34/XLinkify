@@ -64,7 +64,8 @@ class _PostCardState extends State<PostCard> {
     }
   }
 
-  Future<void> _addComment({Function? onSuccess}) async {
+  Future<void> _addComment(
+      {required Post post, required void Function() refreshDialog}) async {
     final commentText = _commentController.text.trim();
     if (commentText.isEmpty) return;
 
@@ -74,18 +75,19 @@ class _PostCardState extends State<PostCard> {
         user: User.fromJson(widget.profile),
       );
 
+      // Add the comment locally and refresh the dialog
       setState(() {
-        widget.post.comments.add(newComment);
+        post.comments.add(newComment);
+        _commentController.clear();
       });
+      refreshDialog(); // Update the dialog UI immediately
 
+      // Update the backend
       await _postService.addComment(
-        widget.post.id,
+        post.id,
         widget.profile['_id'],
         commentText,
       );
-
-      _commentController.clear();
-      if (onSuccess != null) onSuccess(); // Refresh dialog state
     } catch (error) {
       SnackBarUtil.showCustomSnackBar(
         context,
@@ -288,34 +290,35 @@ class _PostCardState extends State<PostCard> {
                       ),
                     ),
                   ],
-                 
                 ),
                 Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _commentController,
-                      decoration: InputDecoration(
-                        hintText: 'Add a comment...',
-                        hintStyle: GoogleFonts.poppins(color: Colors.grey),
-                        border: InputBorder.none,
-                        contentPadding:
-                            const EdgeInsets.symmetric(horizontal: 8),
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _commentController,
+                        decoration: InputDecoration(
+                          hintText: 'Add a comment...',
+                          hintStyle: GoogleFonts.poppins(color: Colors.grey),
+                          border: InputBorder.none,
+                          contentPadding:
+                              const EdgeInsets.symmetric(horizontal: 8),
+                        ),
+                        style: GoogleFonts.poppins(color: Colors.black),
+                        keyboardType: TextInputType.multiline,
                       ),
-                      style: GoogleFonts.poppins(color: Colors.black),
-                      keyboardType: TextInputType.multiline,
                     ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.send, color: Colors.blue),
-                    onPressed: () {
-                      _addComment(onSuccess: () {
-                        setState(() {}); // Refresh the dialog content
-                      });
-                    },
-                  ),
-                ],
-              ),
+                    IconButton(
+                      icon: const Icon(Icons.send, color: Colors.blue),
+                      onPressed: () {
+                        _addComment(
+                            post: post,
+                            refreshDialog: () {
+                              setState(() {}); // Refresh the dialog content
+                            });
+                      },
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
@@ -366,6 +369,13 @@ class _PostCardState extends State<PostCard> {
                             color: Colors.black,
                           ),
                         ),
+                        Text(
+                          '• ${_formatPostDate(post.createdAt)}',
+                          style: GoogleFonts.poppins(
+                            color: Colors.grey,
+                            fontSize: 16,
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 8),
@@ -375,6 +385,7 @@ class _PostCardState extends State<PostCard> {
                         fontSize: 16,
                         color: Colors.grey[700],
                       ),
+                      textAlign: TextAlign.center,
                     ),
                     const Divider(),
                     _buildCommentsSection(post),
@@ -390,8 +401,10 @@ class _PostCardState extends State<PostCard> {
           actions: [
             SizedBox(
               width: 100,
-              child:
-                  MyButton(onTap: () => Navigator.pop(context), str: 'Close'),
+              child: MyButton(
+                onTap: () => Navigator.pop(context),
+                str: 'Close',
+              ),
             ),
           ],
         );
@@ -468,7 +481,7 @@ class _PostCardState extends State<PostCard> {
           );
   }
 
-  Widget _buildBottomSection(Post post, void Function() setDialogState) {
+  Widget _buildBottomSection(Post post, void Function() refreshDialog) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -484,7 +497,7 @@ class _PostCardState extends State<PostCard> {
                     : Colors.black,
               ),
               onPressed: () {
-                _toggleLike(onSuccess: setDialogState);
+                _toggleLike(onSuccess: refreshDialog);
               },
             ),
             if (post.likes.isNotEmpty)
@@ -514,7 +527,7 @@ class _PostCardState extends State<PostCard> {
                   final likedByFollower = snapshot.data;
                   if (likedByFollower != null) {
                     return Text(
-                      'Liked by $likedByFollower ${post.likes.length - 1 == 0 ? '.' : 'and ${post.likes.length - 1} others'}',
+                      'Liked by $likedByFollower and ${post.likes.length - 1} others',
                       style: GoogleFonts.poppins(
                         fontSize: 12,
                         color: Colors.grey[700],
@@ -522,9 +535,7 @@ class _PostCardState extends State<PostCard> {
                     );
                   } else {
                     return Text(
-                      'Liked by ${post.likes.length} ${post.likes.length == 1 ? 'person' : {
-                          post.likes.length == 0 ? '.' : 'people'
-                        }}',
+                      'Liked by ${post.likes.length} ${post.likes.length == 1 ? 'person' : 'people'}',
                       style: GoogleFonts.poppins(
                         fontSize: 12,
                         color: Colors.grey[700],
@@ -535,14 +546,6 @@ class _PostCardState extends State<PostCard> {
               ),
           ],
         ),
-        Text(
-          'Posted ${_formatPostDate(post.createdAt)}',
-          style: GoogleFonts.poppins(
-            fontSize: 12,
-            color: Colors.grey[700],
-          ),
-        ),
-        const SizedBox(height: 8),
         Row(
           children: [
             Expanded(
@@ -561,9 +564,7 @@ class _PostCardState extends State<PostCard> {
             IconButton(
               icon: const Icon(Icons.send, color: Colors.blue),
               onPressed: () {
-                _addComment(onSuccess: () {
-                  setState(() {}); // Refresh the dialog content
-                });
+                _addComment(post: post, refreshDialog: refreshDialog);
               },
             ),
           ],

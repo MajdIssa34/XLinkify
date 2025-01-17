@@ -6,6 +6,8 @@ class Post {
   final List<String> likes;
   final List<Comment> comments;
   final DateTime createdAt;
+  bool isHovered = false; // Added hover state
+
 
   Post({
     required this.id,

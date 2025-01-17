@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:x_frontend/models/post.model.dart';
+import 'package:x_frontend/services/user_service.dart';
 import 'package:x_frontend/widgets/my_button.dart';
+import 'package:x_frontend/widgets/snack_bar.dart';
 import '../../services/post_service.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -16,19 +18,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
   late Future<List<Post>> _userPosts;
   late Map<String, dynamic> _profile;
   final PostService _postService = PostService();
+  final TextEditingController _commentController = TextEditingController();
+  int? _postCount; // Cache the number of posts
+  int? _hoveredIndex; // Track the hovered index
 
   @override
   void initState() {
     super.initState();
     _profile = Map<String, dynamic>.from(widget.profile);
-    _userPosts = _postService
-        .getUserPosts(widget.profile['username']); // Fetch user posts
+    _userPosts = _postService.getUserPosts(widget.profile['username']);
+    _fetchPostCount(); // Fetch post count once and cache it
+  }
+
+  Future<void> _fetchPostCount() async {
+    try {
+      final count = await _postService.getUserPostsLength(_profile['username']);
+      setState(() {
+        _postCount = count; // Cache the post count
+      });
+    } catch (error) {
+      debugPrint('Error fetching post count: $error');
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    print(_postService.getUserPostsLength(_profile['username']).toString());
-
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -48,13 +62,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
         child: Column(
           children: [
             const SizedBox(height: 20),
-            // Profile Info Section
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Profile Avatar
                   CircleAvatar(
                     backgroundImage: _profile['profileImg'] != null &&
                             _profile['profileImg'].isNotEmpty
@@ -68,7 +80,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Username and Edit Profile Button
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 20),
                           child: Row(
@@ -81,51 +92,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   fontSize: 24,
                                 ),
                               ),
+                              const SizedBox(width: 20),
                               SizedBox(
-                                width: 20,
+                                height: 45,
+                                width: 200,
+                                child: MyButton(
+                                  onTap: () {},
+                                  str: "Edit Profile",
+                                ),
                               ),
-                              // EDIT PROFILE
-                              SizedBox(
-                                  height: 45,
-                                  width: 200,
-                                  child: MyButton(
-                                      onTap: () {}, str: "Edit Profile"))
                             ],
                           ),
                         ),
                         const SizedBox(height: 8),
-                        // Stats Row
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                           children: [
-                            FutureBuilder<int>(
-                              future: _postService
-                                  .getUserPostsLength(_profile['username']),
-                              builder: (context, snapshot) {
-                                if (snapshot.connectionState ==
-                                    ConnectionState.waiting) {
-                                  // Show a loading indicator while the data is being fetched
-                                  return _buildStatItem(
-                                    context,
-                                    title: 'Posts',
-                                    value: '...',
-                                  );
-                                } else if (snapshot.hasError) {
-                                  // Handle errors gracefully
-                                  return _buildStatItem(
-                                    context,
-                                    title: 'Posts',
-                                    value: 'Error',
-                                  );
-                                } else {
-                                  // Display the post count once the data is available
-                                  return _buildStatItem(
-                                    context,
-                                    title: 'Posts',
-                                    value: snapshot.data.toString(),
-                                  );
-                                }
-                              },
+                            _buildStatItem(
+                              context,
+                              title: 'Posts',
+                              value: _postCount?.toString() ?? '...',
                             ),
                             _buildStatItem(
                               context,
@@ -148,7 +134,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            // Full Name
             if (_profile['fullName'] != null && _profile['fullName'].isNotEmpty)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -162,7 +147,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ),
             const SizedBox(height: 8),
-            // Bio
             if (_profile['bio'] != null && _profile['bio'].isNotEmpty)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -176,7 +160,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ),
             const SizedBox(height: 16),
-            // User Posts Section
             FutureBuilder<List<Post>>(
               future: _userPosts,
               builder: (context, snapshot) {
@@ -200,8 +183,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                 final posts = snapshot.data!;
                 final screenWidth = MediaQuery.of(context).size.width;
-                final crossAxisCount =
-                    screenWidth > 600 ? 3 : 2; // 3 columns if wide screen
+                final crossAxisCount = screenWidth > 600 ? 3 : 2;
 
                 return GridView.builder(
                   shrinkWrap: true,
@@ -210,53 +192,331 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     crossAxisCount: crossAxisCount,
                     crossAxisSpacing: 8,
                     mainAxisSpacing: 8,
-                    childAspectRatio: 1, // Ensures square-like appearance
+                    childAspectRatio: 1,
                   ),
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   itemCount: posts.length,
                   itemBuilder: (context, index) {
                     final post = posts[index];
+                    final isHovered = _hoveredIndex == index;
 
-                    return Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(10),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Colors.grey,
-                            blurRadius: 3,
-                            offset: Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
-                        child: post.img != null
-                            ? Image.network(
+                    return GestureDetector(
+                      onTap: () => _showTextCommentDialog(post),
+                      child: MouseRegion(
+                        onEnter: (_) => setState(() => _hoveredIndex = index),
+                        onExit: (_) => setState(() => _hoveredIndex = null),
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(10),
+                              child: Image.network(
                                 post.img!,
                                 fit: BoxFit.cover,
-                              )
-                            : Center(
-                                child: Text(
-                                  post.text.isNotEmpty
-                                      ? post.text
-                                      : "No Content",
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 14,
-                                    color: Colors.black,
-                                  ),
-                                  textAlign: TextAlign.center,
+                                width: double.infinity,
+                                height: double.infinity,
+                              ),
+                            ),
+                            if (isHovered)
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withOpacity(0.5),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        const Icon(Icons.favorite,
+                                            color: Colors.white),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          '${post.likes.length}',
+                                          style: GoogleFonts.poppins(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        const Icon(Icons.comment,
+                                            color: Colors.white),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          '${post.comments.length}',
+                                          style: GoogleFonts.poppins(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
                                 ),
                               ),
+                          ],
+                        ),
                       ),
                     );
                   },
                 );
               },
-            )
+            ),
           ],
         ),
       ),
+    );
+  }
+
+  void _showTextCommentDialog(Post post) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+          content: StatefulBuilder(
+            builder: (context, setDialogState) {
+              return SizedBox(
+                width: MediaQuery.of(context).size.width * 0.5,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      children: [
+                        CircleAvatar(
+                          backgroundImage: post.user.profileImg.isNotEmpty
+                              ? NetworkImage(post.user.profileImg)
+                              : const AssetImage(
+                                      'assets/images/placeholder.png')
+                                  as ImageProvider,
+                          radius: 25,
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          post.user.username,
+                          style: GoogleFonts.poppins(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                          ),
+                        ),
+                        Text(
+                          '• ${_formatPostDate(post.createdAt)}',
+                          style: GoogleFonts.poppins(
+                            color: Colors.grey,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      post.text,
+                      style: GoogleFonts.poppins(
+                        fontSize: 16,
+                        color: Colors.grey[700],
+                      ),
+                    ),
+                    const Divider(),
+                    _buildCommentsSection(post),
+                    const Divider(),
+                    _buildBottomSection(post, () {
+                      setDialogState(() {}); // Refresh the dialog state
+                    }),
+                  ],
+                ),
+              );
+            },
+          ),
+          actions: [
+            SizedBox(
+              width: 100,
+              child: MyButton(
+                onTap: () => Navigator.pop(context),
+                str: 'Close',
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildCommentsSection(Post post) {
+    return post.comments.isNotEmpty
+        ? ListView.builder(
+            shrinkWrap: true,
+            itemCount: post.comments.length,
+            itemBuilder: (context, index) {
+              final comment = post.comments[index];
+              return Row(
+                children: [
+                  CircleAvatar(
+                    backgroundImage: const AssetImage(
+                      'assets/images/placeholder.png',
+                    ),
+                    radius: 15,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          comment.user.username,
+                          style: GoogleFonts.poppins(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                            color: Colors.black,
+                          ),
+                        ),
+                        Text(
+                          comment.text,
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            color: Colors.grey[700],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            },
+          )
+        : Center(
+            child: Text(
+              'No comments yet.',
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                color: Colors.grey[700],
+              ),
+            ),
+          );
+  }
+
+  Future<String?> getLikedByFollower(
+      List<dynamic> likes, List<dynamic> followers) async {
+    // Ensure both likes and followers are properly typed as List<String>
+    List<String> likeIds = likes.map((e) => e.toString()).toList();
+    List<String> followerIds = followers.map((e) => e.toString()).toList();
+
+    // Iterate through the likes to find a match in the followers
+    for (String like in likeIds) {
+      if (followerIds.contains(like)) {
+        try {
+          // Fetch the username of the liked user
+          return await UserService().getUsernameById(like);
+        } catch (error) {
+          // Handle any errors in fetching the username
+          debugPrint('Error fetching username for userId $like: $error');
+          continue; // Move to the next user if an error occurs
+        }
+      }
+    }
+    return null; // Return null if no follower liked the post
+  }
+
+  Widget _buildBottomSection(Post post, void Function() refreshDialog) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            IconButton(
+              icon: Icon(
+                post.likes.contains(widget.profile['_id'])
+                    ? Icons.favorite
+                    : Icons.favorite_border,
+                color: post.likes.contains(widget.profile['_id'])
+                    ? Colors.red
+                    : Colors.black,
+              ),
+              onPressed: () {
+                _toggleLike(post, onSuccess: refreshDialog);
+              },
+            ),
+            if (post.likes.isNotEmpty)
+              FutureBuilder<String?>(
+                future:
+                    getLikedByFollower(post.likes, widget.profile['followers']),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return Text(
+                      'Loading likes...',
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        color: Colors.grey[700],
+                      ),
+                    );
+                  }
+                  if (snapshot.hasError) {
+                    return Text(
+                      'Error loading likes',
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        color: Colors.grey[700],
+                      ),
+                    );
+                  }
+
+                  final likedByFollower = snapshot.data;
+                  if (likedByFollower != null) {
+                    return Text(
+                      'Liked by $likedByFollower and ${post.likes.length - 1} others',
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        color: Colors.grey[700],
+                      ),
+                    );
+                  } else {
+                    return Text(
+                      'Liked by ${post.likes.length} ${post.likes.length == 1 ? 'person' : 'people'}',
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        color: Colors.grey[700],
+                      ),
+                    );
+                  }
+                },
+              ),
+          ],
+        ),
+        Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _commentController,
+                decoration: InputDecoration(
+                  hintText: 'Add a comment...',
+                  hintStyle: GoogleFonts.poppins(color: Colors.grey),
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                ),
+                style: GoogleFonts.poppins(color: Colors.black),
+                keyboardType: TextInputType.multiline,
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.send, color: Colors.blue),
+              onPressed: () {
+                _addComment(post, refreshDialog);
+              },
+            ),
+          ],
+        ),
+      ],
     );
   }
 
@@ -281,5 +541,77 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ],
     );
   }
-  
+
+  String _formatPostDate(DateTime dateTime) {
+    final now = DateTime.now();
+    final difference = now.difference(dateTime);
+
+    if (difference.inDays >= 1) {
+      return '${difference.inDays}d ago';
+    } else if (difference.inHours >= 1) {
+      return '${difference.inHours}h ago';
+    } else if (difference.inMinutes >= 1) {
+      return '${difference.inMinutes}m ago';
+    } else {
+      return 'Just now';
+    }
+  }
+
+  Future<void> _toggleLike(Post post, {Function? onSuccess}) async {
+    try {
+      final isLiked = post.likes.contains(widget.profile['_id']);
+      setState(() {
+        if (isLiked) {
+          post.likes.remove(widget.profile['_id']);
+        } else {
+          post.likes.add(widget.profile['_id']);
+        }
+      });
+
+      await _postService.toggleLike(post.id, widget.profile['_id']);
+
+      if (onSuccess != null) onSuccess(); // Refresh dialog state
+    } catch (error) {
+      SnackBarUtil.showCustomSnackBar(
+        context,
+        'Error: ${error.toString()}',
+        isError: true,
+      );
+    }
+  }
+
+  Future<void> _addComment(Post post, void Function() refreshDialog) async {
+    final commentText = _commentController.text.trim();
+    if (commentText.isEmpty) return;
+
+    try {
+      // Create a new comment object
+      final newComment = Comment(
+        text: commentText,
+        user: User.fromJson(widget.profile),
+      );
+
+      // Update the UI immediately
+      setState(() {
+        post.comments.add(newComment);
+        _commentController.clear(); // Clear the input field
+      });
+
+      // Refresh the dialog UI to reflect the new comment
+      refreshDialog();
+
+      // Update the backend
+      await _postService.addComment(
+        post.id,
+        widget.profile['_id'],
+        commentText,
+      );
+    } catch (error) {
+      SnackBarUtil.showCustomSnackBar(
+        context,
+        'Error: ${error.toString()}',
+        isError: true,
+      );
+    }
+  }
 }

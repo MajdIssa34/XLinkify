@@ -48,6 +48,8 @@ const allowedOrigins = [
     "http://localhost:63463",
     "http://localhost:50399",
     "http://localhost:56859",
+    "http://localhost:63651",
+    "http://localhost:49904"
 ];
 
 app.use("/api/auth", authRoutes);

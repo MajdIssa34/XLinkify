@@ -6,6 +6,9 @@ import 'package:image_picker/image_picker.dart';
 import 'package:x_frontend/models/post.model.dart';
 import 'package:x_frontend/services/post_service.dart';
 import 'package:x_frontend/widgets/my_text_field.dart'; // Assuming you have a custom text field widget
+import 'package:x_frontend/widgets/post_card.dart'; // Assuming you have a custom post card widget
+import 'package:x_frontend/widgets/snack_bar.dart';
+
 
 class FeedScreen extends StatefulWidget {
   final Map<String, dynamic> profile;
@@ -31,16 +34,20 @@ class _FeedScreenState extends State<FeedScreen> {
     final text = _textController.text.trim();
 
     if (text.isEmpty && _selectedImage == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please add some text or an image')),
+      SnackBarUtil.showCustomSnackBar(
+        context,
+        'Please add some text or an image',
+        isError: true,
       );
       return;
     }
 
     try {
       await _postService.createPost(text, _selectedImage);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Post created successfully!')),
+      SnackBarUtil.showCustomSnackBar(
+        context,
+        'Post created successfully!',
+        isError: false,
       );
 
       // Refresh the posts
@@ -50,8 +57,10 @@ class _FeedScreenState extends State<FeedScreen> {
         _textController.clear(); // Clear the text input
       });
     } catch (error) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ${error.toString()}')),
+      SnackBarUtil.showCustomSnackBar(
+        context,
+        'Error: ${error.toString()}',
+        isError: true,
       );
     }
   }
@@ -70,13 +79,13 @@ class _FeedScreenState extends State<FeedScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(      
+    return Scaffold(
       body: Column(
         children: [
           Container(
             padding: const EdgeInsets.all(16),
             decoration: const BoxDecoration(
-              color: Colors.black,             
+              color: Colors.white,
             ),
             child: Row(
               children: [
@@ -92,16 +101,22 @@ class _FeedScreenState extends State<FeedScreen> {
                   child: MyTextField(
                     controller: _textController,
                     hintText: Text("What's on your mind...",
-                        style: GoogleFonts.poppins(color: Colors.black)),
+                        style: GoogleFonts.poppins(color: Colors.white)),
                     keyboardType: TextInputType.multiline,
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.add_a_photo, color: Colors.white,),
+                  icon: const Icon(
+                    Icons.add_a_photo,
+                    color: Colors.black,
+                  ),
                   onPressed: _pickImage,
                 ),
                 IconButton(
-                  icon: const Icon(Icons.send, color: Colors.white,),
+                  icon: const Icon(
+                    Icons.send,
+                    color: Colors.black,
+                  ),
                   onPressed: _createPost,
                 ),
               ],
@@ -110,7 +125,7 @@ class _FeedScreenState extends State<FeedScreen> {
           Expanded(
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.black,              
+                color: Colors.white
               ),
               child: FutureBuilder<List<Post>>(
                 future: _posts,
@@ -132,186 +147,18 @@ class _FeedScreenState extends State<FeedScreen> {
                       ),
                     );
                   }
-              
+
                   final posts = snapshot.data!;
                   return ListView.builder(
                     itemCount: posts.length,
                     itemBuilder: (context, index) {
                       final post = posts[index];
-                      return Card(
-                        color: Colors.black,
-                        margin: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 8),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        elevation: 3,
-                        child: Padding(
-                          padding: const EdgeInsets.all(12.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  CircleAvatar(
-                                    backgroundImage: post
-                                            .user.profileImg.isNotEmpty
-                                        ? NetworkImage(post.user.profileImg)
-                                        : const AssetImage(
-                                                'assets/images/placeholder.png')
-                                            as ImageProvider,
-                                    radius: 25,
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        post.user.username,
-                                        style: GoogleFonts.poppins(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 16,
-                                        ),
-                                      ),
-                                      Text(
-                                        post.user.fullName,
-                                        style: GoogleFonts.poppins(
-                                          color: Colors.white,
-                                          fontSize: 14,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 12),
-                              if (post.img != null)
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(10),
-                                  child: Image.network(
-                                    post.img!,
-                                    fit: BoxFit.cover,
-                                  ),
-                                ),
-                              const SizedBox(height: 12),
-                              Text(
-                                post.text,
-                                style: GoogleFonts.poppins(fontSize: 16, color: Colors.white,),
-                                
-                              ),
-                              const Divider(),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Row(
-                                    children: [
-                                      IconButton(
-                                        icon: 
-                                          (post.likes
-                                                  .contains(widget.profile['_id']))
-                                              ? Icon(Icons.favorite, color: Colors.red,)
-                                              : Icon(Icons.favorite_border, color: Colors.white,),
-                                          color: post.likes
-                                                  .contains(widget.profile['_id'])
-                                              ? Colors.red
-                                              : Colors.black,
-                                        
-                                        onPressed: () async {
-                                          try {
-                                            // Optimistically update the UI
-                                            setState(() {
-                                              if (post.likes.contains(
-                                                  widget.profile['_id'])) {
-                                                post.likes.remove(
-                                                    widget.profile['_id']);
-                                              } else {
-                                                post.likes
-                                                    .add(widget.profile['_id']);
-                                              }
-                                            });
-              
-                                            // Call the backend to toggle the like
-                                            await _postService.toggleLike(
-                                                post.id, widget.profile['_id']);
-                                          } catch (error) {
-                                            // Revert state in case of an error
-                                            setState(() {
-                                              if (post.likes.contains(
-                                                  widget.profile['_id'])) {
-                                                post.likes
-                                                    .add(widget.profile['_id']);
-                                              } else {
-                                                post.likes.remove(
-                                                    widget.profile['_id']);
-                                              }
-                                            });
-              
-                                            ScaffoldMessenger.of(context)
-                                                .showSnackBar(
-                                              SnackBar(
-                                                  content: Text(
-                                                      'Error: ${error.toString()}', style: GoogleFonts.poppins(color: Colors.black))),
-                                            );
-                                          }
-                                        },
-                                      ),
-                                      Text('${post.likes.length} Likes', style: GoogleFonts.poppins(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold,)),
-                                    ],
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.comment, color: Colors.white,),
-                                    onPressed: () {
-                                      _showCommentDialog(post);
-                                    },
-                                  ),
-                                ],
-                              ),
-                              if (post.comments.isNotEmpty)
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Divider(),
-                                    ...post.comments.map((comment) {
-                                      return Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                            vertical: 4),
-                                        child: Row(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            CircleAvatar(
-                                              backgroundImage: const AssetImage(
-                                                  'assets/images/placeholder.png'),
-                                              radius: 15,
-                                            ),
-                                            const SizedBox(width: 8),
-                                            Expanded(
-                                              child: Column(
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.start,
-                                                children: [
-                                                  Text(
-                                                    comment.user
-                                                        .username, // Replace with user.username if available
-                                                    style: GoogleFonts.poppins(
-                                                      color: Colors.white,
-                                                      fontWeight: FontWeight.bold,
-                                                    ),
-                                                  ),
-                                                  Text(comment.text, style: GoogleFonts.poppins(color: Colors.white)),
-                                                ],
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      );
-                                    }).toList(),
-                                  ],
-                                ),
-                            ],
-                          ),
-                        ),
+                      return PostCard(
+                        post: post,
+                        profile: widget.profile,
+                        onRefresh: () => setState(() {
+                          _posts = _postService.getAllPosts();
+                        }),
                       );
                     },
                   );
@@ -324,54 +171,4 @@ class _FeedScreenState extends State<FeedScreen> {
     );
   }
 
-  void _showCommentDialog(Post post) {
-    final TextEditingController _commentController = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Add Comment', style: TextStyle(color: Colors.black)),
-        content: MyTextField(
-          controller: _commentController,
-          hintText: Text("Write a comment...",
-              style: GoogleFonts.poppins(color: Colors.black)),
-          keyboardType: TextInputType.multiline,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final commentText = _commentController.text.trim();
-              if (commentText.isEmpty) return;
-
-              try {
-                setState(() {
-                  post.comments.add(
-                    Comment(
-                      text: commentText,
-                      user: User.fromJson(widget.profile),
-                    ),
-                  );
-                });
-                await _postService.addComment(
-                    post.id, widget.profile['_id'], commentText);
-                Navigator.pop(context);
-              } catch (error) {
-                setState(() {
-                  post.comments.removeWhere((c) => c.text == commentText);
-                });
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Error: ${error.toString()}')),
-                );
-              }
-            },
-            child: const Text('Post'),
-          ),
-        ],
-      ),
-    );
-  }
 }

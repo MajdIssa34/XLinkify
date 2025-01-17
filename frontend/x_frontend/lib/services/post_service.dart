@@ -104,4 +104,23 @@ class PostService {
       throw Exception('Failed to create post: ${response.body}');
     }
   }
+
+  /// Delete a post by ID
+Future<void> deletePost(String postId) async {
+  final token = await FlutterSessionJwt.retrieveToken();
+  if (token == null) throw Exception('No token found.');
+
+  final url = Uri.parse("$baseUrl/$postId");
+  final response = await http.delete(
+    url,
+    headers: {
+      "Authorization": "Bearer $token",
+    },
+  );
+
+  if (response.statusCode != 200) {
+    throw Exception('Failed to delete post: ${response.body}');
+  }
+}
+
 }

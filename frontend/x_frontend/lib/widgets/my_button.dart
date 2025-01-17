@@ -25,12 +25,12 @@ class _MyButtonState extends State<MyButton> {
           padding: const EdgeInsets.all(12),
           margin: const EdgeInsets.symmetric(horizontal: 5),
           decoration: BoxDecoration(
-            color: _isHovered ? Colors.green.shade700 : Colors.green.shade800,
+            color: _isHovered ? const Color.fromARGB(255, 40, 40, 68) : const Color.fromARGB(255, 44, 44, 80),
             borderRadius: BorderRadius.circular(8),
             boxShadow: _isHovered
                 ? [
                     BoxShadow(
-                      color: Colors.green.shade300,
+                      color: Color(0xFF1A1A2E),
                       blurRadius: 3,
                       spreadRadius: 1,
                       offset: Offset(0, 2),
@@ -43,7 +43,7 @@ class _MyButtonState extends State<MyButton> {
               widget.str,
               style: GoogleFonts.poppins(
                 fontSize: 16,
-                color: _isHovered ? Colors.white70 : Colors.white,
+                color: _isHovered ? const Color.fromARGB(179, 248, 247, 247) : Colors.white,
                 fontWeight: _isHovered ? FontWeight.bold : FontWeight.normal,
               ),
             ),

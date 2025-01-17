@@ -38,15 +38,16 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    //print(widget.profile);
-    return Scaffold(
-      body: Row(
-        children: [
-          // Sidebar
-          Container(
-            width: screenWidth > 800 ? 250 : 200,
+Widget build(BuildContext context) {
+  final screenWidth = MediaQuery.of(context).size.width;
+
+  return Scaffold(
+    body: Row(
+      children: [
+        // Sidebar with 20% of the screen width
+        Flexible(
+          flex: screenWidth > 1300 ? 3 : 2, // 20%
+          child: Container(
             color: const Color(0xFF1A1A2E),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -83,32 +84,34 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
           ),
-          // Main Content (Feed)
-          Expanded(
-            child: PageTransitionSwitcher(
-              duration: const Duration(milliseconds: 300),
-              transitionBuilder: (child, primaryAnimation, secondaryAnimation) {
-                return SharedAxisTransition(
-                  animation: primaryAnimation,
-                  secondaryAnimation: secondaryAnimation,
-                  transitionType: SharedAxisTransitionType
-                      .horizontal, // Choose the transition type
-                  child: child,
-                );
-              },
-              child: _screens[
-                  _selectedIndex], // Dynamically show the current screen
-              key: ValueKey<int>(_selectedIndex), // Ensure smooth transition
-            ),
+        ),
+
+        // Main content (Feed) with 60% of the screen width
+        Flexible(
+          flex: screenWidth > 1300 ? 5 : 6, // 60%
+          child: PageTransitionSwitcher(
+            duration: const Duration(milliseconds: 300),
+            transitionBuilder: (child, primaryAnimation, secondaryAnimation) {
+              return SharedAxisTransition(
+                animation: primaryAnimation,
+                secondaryAnimation: secondaryAnimation,
+                transitionType: SharedAxisTransitionType.horizontal,
+                child: child,
+              );
+            },
+            child: _screens[_selectedIndex],
+            key: ValueKey<int>(_selectedIndex),
           ),
-          // Right Panel for Suggested Friends
-          Container(
-            width: screenWidth > 800 ? 250 : 200,
-            color: const Color(0xFF000000),
+        ),
+
+        // Suggested friends with 20% of the screen width
+        Flexible(
+          flex: screenWidth > 1300 ? 3 : 2, // 20%
+          child: Container(
+            color: const Color(0xFF1A1A2E),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Logged-in user's profile
                 Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Row(
@@ -117,7 +120,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         radius: 25,
                         backgroundImage: NetworkImage(
                           "https://via.placeholder.com/150",
-                        ), // Replace with actual profile image
+                        ),
                       ),
                       const SizedBox(width: 12),
                       Column(
@@ -132,7 +135,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                           ),
                           Text(
-                            "Full Name", // Replace with actual full name
+                            "Full Name",
                             style: GoogleFonts.poppins(
                               fontSize: 14,
                               color: Colors.grey,
@@ -154,7 +157,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 Divider(color: Colors.grey.shade800),
-                // Suggested Friends Section
                 Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Row(
@@ -207,18 +209,19 @@ class _HomeScreenState extends State<HomeScreen> {
                         );
                       }
 
-                      // Suggested friends list
                       final suggestedFriends = snapshot.data!;
                       return ListView.builder(
                         itemCount: suggestedFriends.length,
                         itemBuilder: (context, index) {
                           final friend = suggestedFriends[index];
-                          final hasImage = friend['image'] != null &&
-                              friend['image']!.isNotEmpty;
+                          final hasImage = friend['profileImg'] != null &&
+                              friend['profileImg'].isNotEmpty;
+                          final username = friend['username'] ?? 'Unknown';
+                          final followers = friend['followers'] ?? [];
 
                           return Padding(
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 16.0,
+                              horizontal: 8.0,
                               vertical: 8.0,
                             ),
                             child: Row(
@@ -226,28 +229,29 @@ class _HomeScreenState extends State<HomeScreen> {
                                 CircleAvatar(
                                   radius: 25,
                                   backgroundImage: hasImage
-                                      ? NetworkImage(friend['image']!)
+                                      ? NetworkImage(friend['profileImg']!)
                                       : const AssetImage(
-                                          'assets/images/placeholder.png',
-                                        ) as ImageProvider,
+                                              'assets/images/placeholder.png')
+                                          as ImageProvider,
                                 ),
-                                const SizedBox(width: 12),
+                                const SizedBox(width: 5),
                                 Expanded(
                                   child: Column(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        friend['name'] ?? '',
+                                        username,
                                         style: GoogleFonts.poppins(
                                           fontSize: 14,
                                           fontWeight: FontWeight.bold,
                                           color: Colors.white,
                                         ),
-                                        overflow: TextOverflow.ellipsis,
                                       ),
                                       Text(
-                                        "Followed by ${friend['follower'] ?? ''}",
+                                        followers.isNotEmpty
+                                            ? "Followed by ${followers[0]}"
+                                            : "No followers yet",
                                         style: GoogleFonts.poppins(
                                           fontSize: 12,
                                           color: Colors.grey,
@@ -277,10 +281,12 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
           ),
-        ],
-      ),
-    );
-  }
+        ),
+      ],
+    ),
+  );
+}
+
 
   Widget _buildNavItem(IconData icon, String label, int index) {
     final bool isSelected = _selectedIndex == index;

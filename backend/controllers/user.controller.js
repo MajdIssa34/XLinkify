@@ -177,7 +177,7 @@ export const getUserById = async (req, res) => {
         res.status(500).json({ message: 'Server error' });
     }
 
-};
+}; 
 
 export const getUserFollowersFollowing = async (req, res) => {
     try {

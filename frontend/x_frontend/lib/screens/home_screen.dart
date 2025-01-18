@@ -1,10 +1,11 @@
 import 'package:animations/animations.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import 'package:x_frontend/screens/internal_screens/feed_screen.dart';
-import 'package:x_frontend/screens/internal_screens/notification_screen.dart';
 import 'package:x_frontend/screens/internal_screens/profile_screen.dart';
 import 'package:x_frontend/services/user_service.dart';
+import 'package:x_frontend/state/user_state.dart';
 import 'package:x_frontend/widgets/snack_bar.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -26,20 +27,24 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
 
+    // Set the initial profile in the UserState
+    final userState = Provider.of<UserState>(context, listen: false);
+    userState.setProfile(widget.profile);
+
     _screens = [
       FeedScreen(
-        profile: widget.profile,
-      ), // Index 0: Feed Screen
-      ProfileScreen(profile: widget.profile), // Index 1: Profile Screen
-      // NotificationsScreen(
-      //     profile: widget.profile), // Index 2: Notifications Screen
+        profile: userState.profile, // Use profile from UserState
+      ),
+      ProfileScreen(profile: userState.profile), // Use profile from UserState
     ];
+
     // Fetch suggested friends
     _suggestedFriends = _userService.getSuggestedUsers();
   }
 
   @override
   Widget build(BuildContext context) {
+    final userState = Provider.of<UserState>(context); // Access UserState
     final screenWidth = MediaQuery.of(context).size.width;
 
     // Check for smaller screens
@@ -158,7 +163,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           CircleAvatar(
                             radius: 25,
                             backgroundImage: NetworkImage(
-                              widget.profile['profileImg'] ??
+                              userState.profile['profileImg'] ??
                                   "assets/images/placeholder.png",
                             ),
                           ),
@@ -167,7 +172,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                widget.profile['username'] ?? '',
+                                userState.profile['username'] ?? '',
                                 style: GoogleFonts.poppins(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
@@ -175,7 +180,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ),
                               ),
                               Text(
-                                widget.profile['fullName'] ?? '',
+                                userState.profile['fullName'] ?? '',
                                 style: GoogleFonts.poppins(
                                   fontSize: 14,
                                   color: Colors.grey,
@@ -185,7 +190,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ],
                       ),
-                    ),                    
+                    ),
                     // Suggested Friends List
                     Flexible(
                       flex: screenWidth > 1300 ? 4 : 2, // 20%
@@ -282,13 +287,17 @@ class _HomeScreenState extends State<HomeScreen> {
                                             trailing: ElevatedButton(
                                               onPressed: () async {
                                                 try {
-                                                  await _userService.followUser(
-                                                      friend['_id']);
+                                                  await _userService
+                                                      .followUser(
+                                                          friend['_id']);
                                                   SnackBarUtil
                                                       .showCustomSnackBar(
                                                     context,
                                                     'Followed ${friend['username']}!',
                                                   );
+                                                  // Update UserState for following changes
+                                                  userState.toggleFollow(
+                                                      friend['_id']);
                                                   setState(() {
                                                     _suggestedFriends =
                                                         _userService
@@ -346,59 +355,60 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildNavItem(IconData icon, String label, int index) {
-  final bool isSelected = _selectedIndex == index;
+    final bool isSelected = _selectedIndex == index;
 
-  return GestureDetector(
-    onTap: () {
-      setState(() {
-        _selectedIndex = index; // Update the selected index
-      });
-    },
-    child: AnimatedContainer(
-      duration: const Duration(milliseconds: 150), // Reduced duration for snappier transitions
-      curve: Curves.easeInOut,
-      decoration: BoxDecoration(
-        gradient: isSelected
-            ? LinearGradient(
-                colors: [Colors.blueAccent, Colors.lightBlueAccent],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              )
-            : null,
-        color: isSelected ? null : Colors.black.withOpacity(0.1), // Slightly lighter background
-        borderRadius: BorderRadius.circular(10), // Smaller corner radius for subtle design
-        boxShadow: isSelected
-            ? [
-                BoxShadow(
-                  color: Colors.blueAccent.withOpacity(0.3), // Lighter shadow for reduced load
-                  blurRadius: 6, // Reduced blur for performance
-                  spreadRadius: 0.5, // Subtle spread
-                  offset: const Offset(0, 2), // Smaller offset
-                ),
-              ]
-            : [],
-      ),
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12), // Reduced padding
-      child: Row(
-        children: [
-          Icon(
-            icon,
-            color: isSelected ? Colors.white : Colors.grey[400],
-            size: 24, // Slightly smaller size for faster rendering
-          ),
-          const SizedBox(width: 6), // Reduced spacing between icon and text
-          Text(
-            label,
-            style: GoogleFonts.poppins(
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedIndex = index; // Update the selected index
+        });
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        curve: Curves.easeInOut,
+        decoration: BoxDecoration(
+          gradient: isSelected
+              ? LinearGradient(
+                  colors: [Colors.blueAccent, Colors.lightBlueAccent],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                )
+              : null,
+          color: isSelected
+              ? null
+              : Colors.black.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(10),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: Colors.blueAccent.withOpacity(0.3),
+                    blurRadius: 6,
+                    spreadRadius: 0.5,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : [],
+        ),
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+        child: Row(
+          children: [
+            Icon(
+              icon,
               color: isSelected ? Colors.white : Colors.grey[400],
-              fontSize: 14, // Slightly smaller text for consistency
-              fontWeight: isSelected ? FontWeight.w500 : FontWeight.w400,
+              size: 24,
             ),
-          ),
-        ],
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: GoogleFonts.poppins(
+                color: isSelected ? Colors.white : Colors.grey[400],
+                fontSize: 14,
+                fontWeight: isSelected ? FontWeight.w500 : FontWeight.w400,
+              ),
+            ),
+          ],
+        ),
       ),
-    ),
-  );
-}
-
+    );
+  }
 }

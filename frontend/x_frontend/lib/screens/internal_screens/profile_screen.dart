@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:x_frontend/models/post.model.dart';
 import 'package:x_frontend/screens/internal_screens/profile_screen_edit.dart';
 import 'package:x_frontend/services/user_service.dart';
+import 'package:x_frontend/state/user_state.dart';
 import 'package:x_frontend/widgets/my_button.dart';
 import 'package:x_frontend/widgets/snack_bar.dart';
 import '../../services/post_service.dart';
@@ -19,7 +21,6 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   late Future<List<Post>> _userPosts;
-  late Map<String, dynamic> _profile;
   final PostService _postService = PostService();
   final TextEditingController _commentController = TextEditingController();
   int? _postCount; // Cache the number of posts
@@ -28,15 +29,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
-    _profile = Map<String, dynamic>.from(widget.profile);
-    _userPosts = _postService.getUserPosts(widget.profile['username']);
-    _fetchPostCount(); // Fetch post count once and cache it
-    print(_profile);
+    final userState = Provider.of<UserState>(context, listen: false);
+    _userPosts = _postService.getUserPosts(userState.profile['username']);
+    _fetchPostCount();
   }
 
   Future<void> _fetchPostCount() async {
     try {
-      final count = await _postService.getUserPostsLength(_profile['username']);
+      final userState = Provider.of<UserState>(context, listen: false);
+      final count = await _postService.getUserPostsLength(userState.profile['username']);
       setState(() {
         _postCount = count; // Cache the post count
       });
@@ -45,26 +46,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  void _updateProfile(Map<String, dynamic> updatedProfile) {
-    // If there's a nested 'user' object, merge its fields
-    if (updatedProfile['user'] != null) {
-      final user = updatedProfile['user'];
-      updatedProfile.remove('user');
-      updatedProfile = {...updatedProfile, ...user};
-    }
-
-    setState(() {
-      _profile = {
-        ..._profile,
-        ...updatedProfile,
-      };
-    });
-
-    print(_profile); // Debug the updated profile
-  }
-
   @override
   Widget build(BuildContext context) {
+    final userState = Provider.of<UserState>(context);
+    final profile = userState.profile;
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -90,9 +76,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   CircleAvatar(
-                    backgroundImage: _profile['profileImg'] != null &&
-                            _profile['profileImg'].isNotEmpty
-                        ? NetworkImage(_profile['profileImg'])
+                    backgroundImage: profile['profileImg'] != null &&
+                            profile['profileImg'].isNotEmpty
+                        ? NetworkImage(profile['profileImg'])
                         : const AssetImage('assets/images/placeholder.png')
                             as ImageProvider,
                     radius: 100,
@@ -108,7 +94,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             mainAxisAlignment: MainAxisAlignment.start,
                             children: [
                               Text(
-                                _profile['username'] ?? 'Unknown User',
+                                profile['username'] ?? 'Unknown User',
                                 style: GoogleFonts.poppins(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 24,
@@ -124,9 +110,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       context,
                                       MaterialPageRoute(
                                         builder: (context) => EditProfileScreen(
-                                          profile:
-                                              _profile, // Pass current profile data
-                                          onProfileUpdated: _updateProfile,
+                                          profile: profile,
+                                          onProfileUpdated: (updatedProfile) {
+                                            userState.setProfile(updatedProfile);
+                                          },
                                         ),
                                       ),
                                     );
@@ -159,9 +146,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               child: _buildStatItem(
                                 context,
                                 title: 'Followers',
-                                value:
-                                    _profile['followers']?.length.toString() ??
-                                        '0',
+                                value: profile['followers']?.length.toString() ??
+                                    '0',
                               ),
                             ),
                             GestureDetector(
@@ -177,21 +163,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               child: _buildStatItem(
                                 context,
                                 title: 'Following',
-                                value:
-                                    _profile['following']?.length.toString() ??
-                                        '0',
+                                value: profile['following']?.length.toString() ??
+                                    '0',
                               ),
                             ),
                           ],
                         ),
                         const SizedBox(height: 16),
-                        if (_profile['fullName'] != null &&
-                            _profile['fullName'].isNotEmpty)
+                        if (profile['fullName'] != null &&
+                            profile['fullName'].isNotEmpty)
                           Padding(
                             padding:
                                 const EdgeInsets.symmetric(horizontal: 16.0),
                             child: Text(
-                              _profile['fullName'],
+                              profile['fullName'],
                               style: GoogleFonts.poppins(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
@@ -200,13 +185,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ),
                           ),
                         const SizedBox(height: 8),
-                        if (_profile['bio'] != null &&
-                            _profile['bio'].isNotEmpty)
+                        if (profile['bio'] != null && profile['bio'].isNotEmpty)
                           Padding(
                             padding:
                                 const EdgeInsets.symmetric(horizontal: 16.0),
                             child: Text(
-                              _profile['bio'],
+                              profile['bio'],
                               textAlign: TextAlign.left,
                               style: GoogleFonts.poppins(
                                 fontSize: 14,
@@ -215,14 +199,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ),
                           ),
                         const SizedBox(height: 8),
-                        if (_profile['link'] != null &&
-                            _profile['link'].isNotEmpty)
+                        if (profile['link'] != null &&
+                            profile['link'].isNotEmpty)
                           Padding(
                             padding:
                                 const EdgeInsets.symmetric(horizontal: 16.0),
                             child: GestureDetector(
                               onTap: () async {
-                                final url = _profile['link'];
+                                final url = profile['link'];
                                 if (await canLaunchUrl(Uri.parse(url))) {
                                   await launchUrl(Uri.parse(url),
                                       mode: LaunchMode.externalApplication);
@@ -235,7 +219,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 }
                               },
                               child: Text(
-                                _profile['link'],
+                                profile['link'],
                                 textAlign: TextAlign.left,
                                 style: GoogleFonts.poppins(
                                   fontSize: 14,

@@ -162,15 +162,51 @@ export const updateUser = async (req, res) => {
 export const getUserById = async (req, res) => {
     try {
         const { id } = req.params;
-        const user = await User.findById(id);
+        const user = await User.findById(id, 'username profileImg'); // Select only username and profileImg
 
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        res.status(200).json({ username: user.username });
+        res.status(200).json({
+            username: user.username,
+            profileImg: user.profileImg,
+        });
     } catch (error) {
-        console.error('Error fetching username:', error);
+        console.error('Error fetching user details:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+
+};
+
+export const getUserFollowersFollowing = async (req, res) => {
+    try {
+        const userId = req.user._id; // Get current user ID
+
+        // Find the user and populate both followers and following fields
+        const user = await User.findById(userId)
+            .select('followers following') // Select only followers and following fields
+            .populate({
+                path: 'followers',
+                select: 'username profileImg', // Fetch username and profileImg for followers
+            })
+            .populate({
+                path: 'following',
+                select: 'username profileImg', // Fetch username and profileImg for following
+            });
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        // Respond with both followers and following
+        res.status(200).json({
+            followers: user.followers,
+            following: user.following,
+        });
+    } catch (error) {
+        console.error('Error fetching followers and following:', error);
         res.status(500).json({ message: 'Server error' });
     }
 };
+

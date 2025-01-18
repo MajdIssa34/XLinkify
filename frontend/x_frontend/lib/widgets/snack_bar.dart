@@ -33,7 +33,7 @@ class SnackBarUtil {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(10),
       ),
-      duration: const Duration(seconds: 3),
+      duration: const Duration(seconds: 5),
     );
 
     ScaffoldMessenger.of(context).showSnackBar(snackBar);

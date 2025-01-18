@@ -45,6 +45,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  void _updateProfile(Map<String, dynamic> updatedProfile) {
+    // If there's a nested 'user' object, merge its fields
+    if (updatedProfile['user'] != null) {
+      final user = updatedProfile['user'];
+      updatedProfile.remove('user');
+      updatedProfile = {...updatedProfile, ...user};
+    }
+
+    setState(() {
+      _profile = {
+        ..._profile,
+        ...updatedProfile,
+      };
+    });
+
+    print(_profile); // Debug the updated profile
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -108,6 +126,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                         builder: (context) => EditProfileScreen(
                                           profile:
                                               _profile, // Pass current profile data
+                                          onProfileUpdated: _updateProfile,
                                         ),
                                       ),
                                     );
@@ -127,17 +146,41 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               title: 'Posts',
                               value: _postCount?.toString() ?? '...',
                             ),
-                            _buildStatItem(
-                              context,
-                              title: 'Followers',
-                              value: _profile['followers']?.length.toString() ??
-                                  '0',
+                            GestureDetector(
+                              onTap: () {
+                                _showFollowerList(
+                                  context,
+                                  'Followers',
+                                  UserService()
+                                      .getUserFollowersFollowing()
+                                      .then((data) => data['followers']),
+                                );
+                              },
+                              child: _buildStatItem(
+                                context,
+                                title: 'Followers',
+                                value:
+                                    _profile['followers']?.length.toString() ??
+                                        '0',
+                              ),
                             ),
-                            _buildStatItem(
-                              context,
-                              title: 'Following',
-                              value: _profile['following']?.length.toString() ??
-                                  '0',
+                            GestureDetector(
+                              onTap: () {
+                                _showFollowerList(
+                                  context,
+                                  'Following',
+                                  UserService()
+                                      .getUserFollowersFollowing()
+                                      .then((data) => data['following']),
+                                );
+                              },
+                              child: _buildStatItem(
+                                context,
+                                title: 'Following',
+                                value:
+                                    _profile['following']?.length.toString() ??
+                                        '0',
+                              ),
                             ),
                           ],
                         ),
@@ -322,6 +365,158 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  void _showFollowerList(BuildContext context, String title,
+      Future<List<dynamic>> userListFuture) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return FutureBuilder<List<dynamic>>(
+          future: userListFuture,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(
+                child: CircularProgressIndicator(),
+              );
+            } else if (snapshot.hasError) {
+              return Center(
+                child: Text(
+                  'Error: ${snapshot.error}',
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.red,
+                  ),
+                ),
+              );
+            } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+              return Center(
+                child: Text(
+                  'No users found',
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    color: Colors.grey[700],
+                  ),
+                ),
+              );
+            }
+
+            final users = snapshot.data!;
+            return StatefulBuilder(
+              builder: (context, setModalState) {
+                return Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Title
+                      Text(
+                        title,
+                        style: GoogleFonts.poppins(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      // User List
+                      Expanded(
+                        child: ListView.builder(
+                          itemCount: users.length,
+                          itemBuilder: (context, index) {
+                            final user = users[index];
+                            final userId = user['_id'];
+                            final isFollowing =
+                                widget.profile['following']?.contains(userId) ??
+                                    false;
+
+                            return Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: ListTile(
+                                leading: CircleAvatar(
+                                  backgroundImage: user['profileImg'] != null &&
+                                          user['profileImg'].isNotEmpty
+                                      ? NetworkImage(user['profileImg'])
+                                      : const AssetImage(
+                                              'assets/images/placeholder.png')
+                                          as ImageProvider,
+                                  radius: 24,
+                                ),
+                                title: Text(
+                                  user['username'] ?? 'Unknown',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.black,
+                                  ),
+                                ),
+                                subtitle: user['fullName'] != null
+                                    ? Text(
+                                        user['fullName'],
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 12,
+                                          color: Colors.grey[600],
+                                        ),
+                                      )
+                                    : null,
+                                trailing: SizedBox(
+                                  height: 50,
+                                  width: 120,
+                                  child: MyButton(
+                                    onTap: () async {
+                                      try {
+                                        // Perform the follow/unfollow toggle
+                                        await UserService().followUser(userId);
+
+                                        // Update the state dynamically
+                                        setModalState(() {
+                                          if (isFollowing) {
+                                            widget.profile['following']
+                                                ?.remove(userId);
+                                          } else {
+                                            widget.profile['following']
+                                                ?.add(userId);
+                                          }
+                                        });
+
+                                        // Show a success message
+                                        SnackBarUtil.showCustomSnackBar(
+                                          context,
+                                          isFollowing
+                                              ? 'Unfollowed ${user['username']}'
+                                              : 'Followed ${user['username']}',
+                                        );
+                                      } catch (error) {
+                                        // Show an error message
+                                        SnackBarUtil.showCustomSnackBar(
+                                          context,
+                                          'Error: ${error.toString()}',
+                                          isError: true,
+                                        );
+                                      }
+                                    },
+                                    str: isFollowing ? 'Unfollow' : 'Follow',
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            );
+          },
+        );
+      },
     );
   }
 

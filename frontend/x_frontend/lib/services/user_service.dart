@@ -142,4 +142,31 @@ class UserService {
       throw Exception('Failed to update profile: ${response.body}');
     }
   }
+
+  Future<Map<String, dynamic>> getUserFollowersFollowing() async {
+    final token = await FlutterSessionJwt.retrieveToken(); // Retrieve the token
+    if (token == null) {
+      throw Exception('No token found. User not logged in.');
+    }
+
+    final url = Uri.parse("$baseUrl/username");
+    try {
+      final response = await http.get(
+        url,
+        headers: {
+          "Authorization": "Bearer $token"
+        }, // Add the token to the headers
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body); // Return followers and following
+      } else {
+        final error = jsonDecode(response.body)['message'] ??
+            'Failed to fetch followers and following';
+        throw Exception(error);
+      }
+    } catch (error) {
+      throw Exception('Error fetching followers and following: $error');
+    }
+  }
 }

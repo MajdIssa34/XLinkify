@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:x_frontend/models/post.model.dart';
+import 'package:x_frontend/screens/internal_screens/profile_screen_edit.dart';
 import 'package:x_frontend/services/user_service.dart';
 import 'package:x_frontend/widgets/my_button.dart';
 import 'package:x_frontend/widgets/snack_bar.dart';
@@ -8,6 +10,7 @@ import '../../services/post_service.dart';
 
 class ProfileScreen extends StatefulWidget {
   final Map<String, dynamic> profile;
+
   const ProfileScreen({Key? key, required this.profile}) : super(key: key);
 
   @override
@@ -28,6 +31,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _profile = Map<String, dynamic>.from(widget.profile);
     _userPosts = _postService.getUserPosts(widget.profile['username']);
     _fetchPostCount(); // Fetch post count once and cache it
+    print(_profile);
   }
 
   Future<void> _fetchPostCount() async {
@@ -97,7 +101,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 height: 45,
                                 width: 200,
                                 child: MyButton(
-                                  onTap: () {},
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => EditProfileScreen(
+                                          profile:
+                                              _profile, // Pass current profile data
+                                        ),
+                                      ),
+                                    );
+                                  },
                                   str: "Edit Profile",
                                 ),
                               ),
@@ -127,38 +141,73 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ),
                           ],
                         ),
+                        const SizedBox(height: 16),
+                        if (_profile['fullName'] != null &&
+                            _profile['fullName'].isNotEmpty)
+                          Padding(
+                            padding:
+                                const EdgeInsets.symmetric(horizontal: 16.0),
+                            child: Text(
+                              _profile['fullName'],
+                              style: GoogleFonts.poppins(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black,
+                              ),
+                            ),
+                          ),
+                        const SizedBox(height: 8),
+                        if (_profile['bio'] != null &&
+                            _profile['bio'].isNotEmpty)
+                          Padding(
+                            padding:
+                                const EdgeInsets.symmetric(horizontal: 16.0),
+                            child: Text(
+                              _profile['bio'],
+                              textAlign: TextAlign.left,
+                              style: GoogleFonts.poppins(
+                                fontSize: 14,
+                                color: Colors.grey[700],
+                              ),
+                            ),
+                          ),
+                        const SizedBox(height: 8),
+                        if (_profile['link'] != null &&
+                            _profile['link'].isNotEmpty)
+                          Padding(
+                            padding:
+                                const EdgeInsets.symmetric(horizontal: 16.0),
+                            child: GestureDetector(
+                              onTap: () async {
+                                final url = _profile['link'];
+                                if (await canLaunchUrl(Uri.parse(url))) {
+                                  await launchUrl(Uri.parse(url),
+                                      mode: LaunchMode.externalApplication);
+                                } else {
+                                  SnackBarUtil.showCustomSnackBar(
+                                    context,
+                                    'Could not open the link',
+                                    isError: true,
+                                  );
+                                }
+                              },
+                              child: Text(
+                                _profile['link'],
+                                textAlign: TextAlign.left,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 14,
+                                  color: Colors.blue,
+                                  decoration: TextDecoration.underline,
+                                ),
+                              ),
+                            ),
+                          ),
                       ],
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 16),
-            if (_profile['fullName'] != null && _profile['fullName'].isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: Text(
-                  _profile['fullName'],
-                  style: GoogleFonts.poppins(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
-                  ),
-                ),
-              ),
-            const SizedBox(height: 8),
-            if (_profile['bio'] != null && _profile['bio'].isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: Text(
-                  _profile['bio'],
-                  textAlign: TextAlign.left,
-                  style: GoogleFonts.poppins(
-                    fontSize: 14,
-                    color: Colors.grey[700],
-                  ),
-                ),
-              ),
             const SizedBox(height: 16),
             FutureBuilder<List<Post>>(
               future: _userPosts,

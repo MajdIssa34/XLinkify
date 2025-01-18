@@ -89,10 +89,12 @@ export const login = async (req, res) => {
             fullName: user.fullName,
             username: user.username,
             email: user.email,
+            bio: user.bio,
             followers: user.followers,
             following: user.following,
             profileImg: user.profileImg,
             coverImg: user.coverImg,
+            link: user.link,
         });
     } catch (error) {
         console.error("Error in login controller:", error.message);

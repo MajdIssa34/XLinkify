@@ -6,35 +6,37 @@ class UserService {
   static const String baseUrl = "http://localhost:8000/api/users";
 
   /// Fetch username by user ID
-Future<String> getUsernameById(String userId) async {
-  final token = await FlutterSessionJwt.retrieveToken(); // Retrieve the token
-  if (token == null) {
-    throw Exception('No token found. User not logged in.');
-  }
-
-  final url = Uri.parse("$baseUrl/username/$userId");
-  try {
-    final response = await http.get(
-      url,
-      headers: {"Authorization": "Bearer $token"}, // Add the token to the headers
-    );
-
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      if (data.containsKey('username')) {
-        return data['username'];
-      } else {
-        throw Exception('Invalid response: Username not found');
-      }
-    } else {
-      final error = jsonDecode(response.body)['message'] ?? 'Failed to fetch username';
-      throw Exception(error);
+  Future<String> getUsernameById(String userId) async {
+    final token = await FlutterSessionJwt.retrieveToken(); // Retrieve the token
+    if (token == null) {
+      throw Exception('No token found. User not logged in.');
     }
-  } catch (error) {
-    throw Exception('Error fetching username: $error');
-  }
-}
 
+    final url = Uri.parse("$baseUrl/username/$userId");
+    try {
+      final response = await http.get(
+        url,
+        headers: {
+          "Authorization": "Bearer $token"
+        }, // Add the token to the headers
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data.containsKey('username')) {
+          return data['username'];
+        } else {
+          throw Exception('Invalid response: Username not found');
+        }
+      } else {
+        final error =
+            jsonDecode(response.body)['message'] ?? 'Failed to fetch username';
+        throw Exception(error);
+      }
+    } catch (error) {
+      throw Exception('Error fetching username: $error');
+    }
+  }
 
   /// Fetch user profile by username
   Future<Map<String, dynamic>> getUserProfile(String username) async {
@@ -47,7 +49,9 @@ Future<String> getUsernameById(String userId) async {
     try {
       final response = await http.get(
         url,
-        headers: {"Authorization": "Bearer $token"}, // Add the token to the headers
+        headers: {
+          "Authorization": "Bearer $token"
+        }, // Add the token to the headers
       );
 
       if (response.statusCode == 200) {
@@ -73,7 +77,9 @@ Future<String> getUsernameById(String userId) async {
     try {
       final response = await http.post(
         url,
-        headers: {"Authorization": "Bearer $token"}, // Add the token to the headers
+        headers: {
+          "Authorization": "Bearer $token"
+        }, // Add the token to the headers
       );
 
       if (response.statusCode != 200) {
@@ -97,7 +103,9 @@ Future<String> getUsernameById(String userId) async {
     try {
       final response = await http.get(
         url,
-        headers: {"Authorization": "Bearer $token"}, // Add the token to the headers
+        headers: {
+          "Authorization": "Bearer $token"
+        }, // Add the token to the headers
       );
 
       if (response.statusCode == 200) {
@@ -113,30 +121,25 @@ Future<String> getUsernameById(String userId) async {
   }
 
   /// Update user information
-  Future<void> updateUser(Map<String, dynamic> userData) async {
-    final token = await FlutterSessionJwt.retrieveToken(); // Retrieve the token
-    if (token == null) {
-      throw Exception('No token found. User not logged in.');
-    }
+  Future<Map<String, dynamic>> updateUser(Map<String, dynamic> userData) async {
+    final token = await FlutterSessionJwt.retrieveToken(); // Example for token
+    final url = Uri.parse(
+        '$baseUrl/update'); // Replace with your API endpoint
 
-    final url = Uri.parse("$baseUrl/update");
-    try {
-      final response = await http.post(
-        url,
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": "Bearer $token", // Add the token to the headers
-        },
-        body: jsonEncode(userData),
-      );
+    final response = await http.post(
+      url,
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode(userData),
+    );
 
-      if (response.statusCode != 200) {
-        final error = jsonDecode(response.body)['message'] ??
-            'Failed to update user';
-        throw Exception(error);
-      }
-    } catch (error) {
-      throw Exception('Error updating user: $error');
+    if (response.statusCode == 200) {
+      return jsonDecode(
+          response.body); // Parse and return the updated profile data
+    } else {
+      throw Exception('Failed to update profile: ${response.body}');
     }
   }
 }

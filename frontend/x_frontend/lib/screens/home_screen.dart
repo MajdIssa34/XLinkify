@@ -156,7 +156,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             radius: 25,
                             backgroundImage: NetworkImage(
                               widget.profile['profileImg'] ??
-                                  "https://via.placeholder.com/150",
+                                  "assets/images/placeholder.png",
                             ),
                           ),
                           const SizedBox(width: 12),

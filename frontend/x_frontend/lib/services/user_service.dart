@@ -5,8 +5,6 @@ import 'package:http/http.dart' as http;
 class UserService {
   static const String baseUrl = "http://localhost:8000/api/users";
 
-
-  
   // /// Fetch username by user ID
   // Future<String> getUsernameById(String userId) async {
   //   final token = await FlutterSessionJwt.retrieveToken(); // Retrieve the token
@@ -73,10 +71,10 @@ class UserService {
     if (token == null) {
       throw Exception('No token found. User not logged in.');
     }
-    final response = await http.get(Uri.parse("$baseUrl/watchlist/$username"),
-        headers: {
-          'Authorization': 'Bearer $token', // Replace with your auth token
-        });
+    final response =
+        await http.get(Uri.parse("$baseUrl/watchlist/$username"), headers: {
+      'Authorization': 'Bearer $token', // Replace with your auth token
+    });
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body) as List<dynamic>;
@@ -86,29 +84,28 @@ class UserService {
     }
   }
 
-  /// Follow or unfollow a user
-  Future<void> addToWatchlist(String userId) async {
+  Future<Map<String, dynamic>> addToWatchlist(String userId) async {
     final token = await FlutterSessionJwt.retrieveToken(); // Retrieve the token
     if (token == null) {
       throw Exception('No token found. User not logged in.');
     }
 
-    final url = Uri.parse("$baseUrl/watchlist/$userId");
-    try {
-      final response = await http.post(
-        url,
-        headers: {
-          "Authorization": "Bearer $token"
-        }, // Add the token to the headers
-      );
+    final url = Uri.parse('http://localhost:8000/api/users/watchlist/$userId');
+    final response = await http.put(
+      url,
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+    );
 
-      if (response.statusCode != 200) {
-        final error = jsonDecode(response.body)['message'] ??
-            'Failed to add the user to the watchlist';
-        throw Exception(error);
-      }
-    } catch (error) {
-      throw Exception('Error adding to watch list user: $error');
+    print('Response: ${response.body}');
+
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    } else {
+      throw Exception('Failed to update watchlist: ${response.body}');
     }
   }
 
@@ -143,8 +140,7 @@ class UserService {
   /// Update user information
   Future<Map<String, dynamic>> updateUser(Map<String, dynamic> userData) async {
     final token = await FlutterSessionJwt.retrieveToken(); // Example for token
-    final url = Uri.parse(
-        '$baseUrl/update'); // Replace with your API endpoint
+    final url = Uri.parse('$baseUrl/update'); // Replace with your API endpoint
 
     final response = await http.post(
       url,
@@ -189,5 +185,4 @@ class UserService {
   //     throw Exception('Error fetching followers and following: $error');
   //   }
   // }
-
 }

@@ -22,49 +22,55 @@ export const getUserProfile = async (req, res) => {
 
 export const addToWatchlist = async (req, res) => {
     try {
-        const { id } = req.params; // ID of the user to be added/removed from the watchlist
-        const currentUserId = req.user._id; // ID of the current logged-in user
+        const { id } = req.params; // ID of the user to be added/removed
+        const currentUserId = req.user._id; // ID of the logged-in user
 
         if (id === currentUserId.toString()) {
             return res.status(400).json({ error: "You can't add yourself to the watchlist" });
         }
 
-        // Find both the current user and the user to add to the watchlist
+        // Find the current user
         const currentUser = await User.findById(currentUserId);
-        const userToModify = await User.findById(id);
 
-        if (!currentUser || !userToModify) {
-            return res.status(404).json({ error: "User not found" });
+        if (!currentUser) {
+            return res.status(404).json({ error: "Current user not found" });
         }
 
-        // Check if the user is already in the watchlist
+        // Check if the user exists
+        const userToModify = await User.findById(id);
+        if (!userToModify) {
+            return res.status(404).json({ error: "User to modify not found" });
+        }
+
         const isInWatchlist = currentUser.watchlist.includes(id);
 
         if (isInWatchlist) {
             // Remove from the watchlist
-            await User.findByIdAndUpdate(currentUserId, { $pull: { watchlist: id } });
-            res.status(200).json({ message: "Removed from watchlist" });
+            await User.findByIdAndUpdate(currentUserId, { $pull: { watchlist: id } }, { new: true });
+            const updatedUser = await User.findById(currentUserId).select('watchlist');
+            const updatedCount = updatedUser.watchlist.length; // Get the new count after update
+            return res.status(200).json({
+                message: "Removed from watchlist",
+                action: "removed",
+                updatedCount,
+            });
         } else {
             // Add to the watchlist
-            await User.findByIdAndUpdate(currentUserId, { $push: { watchlist: id } });
-
-            // Create a notification for the user being added to the watchlist
-            const newNotification = new Notification({
-                type: "watchlist",
-                from: currentUserId,
-                to: userToModify._id,
-                description: `${currentUser.username} added you to their watchlist.`,
+            await User.findByIdAndUpdate(currentUserId, { $push: { watchlist: id } }, { new: true });
+            const updatedUser = await User.findById(currentUserId).select('watchlist');
+            const updatedCount = updatedUser.watchlist.length; // Get the new count after update
+            return res.status(200).json({
+                message: "Added to watchlist",
+                action: "added",
+                updatedCount,
             });
-
-            await newNotification.save();
-
-            res.status(200).json({ message: "Added to watchlist" });
         }
     } catch (error) {
         console.error("Error in addToWatchlist controller:", error.message);
-        res.status(500).json({ message: "Internal server error" });
+        return res.status(500).json({ error: "Internal server error" });
     }
 };
+
 
 
 export const getUserWatchlist = async (req, res) => {
@@ -86,7 +92,6 @@ export const getUserWatchlist = async (req, res) => {
         console.error("Error in getUserWatchlist controller:", error.message);
     }
 };
-
 
 // export const followUnfollowUser = async (req, res) => {
 //     try {

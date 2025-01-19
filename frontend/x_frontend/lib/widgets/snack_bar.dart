@@ -17,7 +17,7 @@ class SnackBarUtil {
             ),
             const SizedBox(width: 10),
             Expanded(
-              child: Text(
+              child: SelectableText(
                 message,
                 style: GoogleFonts.poppins(
                   color: Colors.black,

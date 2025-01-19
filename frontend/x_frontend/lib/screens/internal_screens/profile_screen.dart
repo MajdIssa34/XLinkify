@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:x_frontend/models/post.model.dart';
 import 'package:x_frontend/screens/internal_screens/profile_screen_edit.dart';
 import 'package:x_frontend/services/user_service.dart';
-import 'package:x_frontend/state/user_state.dart';
 import 'package:x_frontend/widgets/my_button.dart';
 import 'package:x_frontend/widgets/snack_bar.dart';
 import '../../services/post_service.dart';
@@ -356,71 +354,129 @@ class _ProfileScreenState extends State<ProfileScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: GoogleFonts.poppins(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
-                ),
-              ),
-              const SizedBox(height: 10),
-              Expanded(
-                child: connections.isNotEmpty
-                    ? ListView.builder(
-                        itemCount: connections.length,
-                        itemBuilder: (context, index) {
-                          final user = connections[index];
-                          return Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: ListTile(
-                              leading: CircleAvatar(
-                                backgroundImage: user['profileImg'] != null &&
-                                        user['profileImg'].isNotEmpty
-                                    ? NetworkImage(user['profileImg'])
-                                    : const AssetImage(
-                                            'assets/images/placeholder.png')
-                                        as ImageProvider,
-                                radius: 24,
-                              ),
-                              title: Text(
-                                user['username'] ?? 'Unknown',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black,
-                                ),
-                              ),
-                              subtitle: user['fullName'] != null
-                                  ? Text(
-                                      user['fullName'],
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setModalState) {
+            return Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: GoogleFonts.poppins(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Expanded(
+                    child: connections.isNotEmpty
+                        ? ListView.builder(
+                            itemCount: connections.length,
+                            itemBuilder: (context, index) {
+                              final user = connections[index];
+                              return Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: ListTile(
+                                  leading: CircleAvatar(
+                                    backgroundImage: user['profileImg'] !=
+                                                null &&
+                                            user['profileImg'].isNotEmpty
+                                        ? NetworkImage(user['profileImg'])
+                                        : const AssetImage(
+                                                'assets/images/placeholder.png')
+                                            as ImageProvider,
+                                    radius: 24,
+                                  ),
+                                  title: Text(
+                                    user['username'] ?? 'Unknown',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black,
+                                    ),
+                                  ),
+                                  subtitle: user['fullName'] != null
+                                      ? Text(
+                                          user['fullName'],
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 12,
+                                            color: Colors.grey[600],
+                                          ),
+                                        )
+                                      : null,
+                                  trailing: TextButton(
+                                    onPressed: () async {
+                                      try {
+                                        final result = await UserService()
+                                            .addToWatchlist(user['_id']);
+                                        if (result['action'] == 'removed') {
+                                          setModalState(() {
+                                            connections.removeAt(
+                                                index); // Remove from modal state
+                                          });
+                                          setState(() {
+                                            // Update the list of IDs to reflect the change
+                                            widget.profile['watchlist'] = widget
+                                                .profile['watchlist']
+                                                .where(
+                                                    (id) => id != user['_id'])
+                                                .toList();
+                                          });
+                                          SnackBarUtil.showCustomSnackBar(
+                                            context,
+                                            '${user['username']} has been removed from your watchlist.',
+                                          );
+                                        } else if (result['action'] ==
+                                            'added') {
+                                          setState(() {
+                                            // Add the ID back to the list
+                                            widget.profile['watchlist']
+                                                .add(user['_id']);
+                                          });
+                                          SnackBarUtil.showCustomSnackBar(
+                                            context,
+                                            '${user['username']} has been added to your watchlist.',
+                                          );
+                                        }
+                                      } catch (error) {
+                                        SnackBarUtil.showCustomSnackBar(
+                                          context,
+                                          'Failed to update watchlist: $error',
+                                          isError: true,
+                                        );
+                                      }
+                                    },
+                                    style: TextButton.styleFrom(
+                                      foregroundColor: Colors.red,
+                                    ),
+                                    child: Text(
+                                      'Disconnect',
                                       style: GoogleFonts.poppins(
-                                        fontSize: 12,
-                                        color: Colors.grey[600],
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
                                       ),
-                                    )
-                                  : null,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          )
+                        : Center(
+                            child: Text(
+                              'No connections found.',
+                              style: GoogleFonts.poppins(
+                                fontSize: 14,
+                                color: Colors.grey,
+                              ),
                             ),
-                          );
-                        },
-                      )
-                    : Center(
-                        child: Text(
-                          'No connections found.',
-                          style: GoogleFonts.poppins(
-                            fontSize: 14,
-                            color: Colors.grey,
                           ),
-                        ),
-                      ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            );
+          },
         );
       },
     );

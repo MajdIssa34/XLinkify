@@ -20,20 +20,13 @@ const userSchema = mongoose.Schema({
         required: true,
         unique: true,
     },
-    followers: [
+    watchlist: [
         {
             type: mongoose.Schema.Types.ObjectId,
             ref: "User",
             default: [],
         }
     ], 
-    following: [
-        {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "User",
-            default: [],
-        }
-    ],
     profileImg: {
         type: String,
         default: "",

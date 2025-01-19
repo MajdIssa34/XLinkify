@@ -227,45 +227,44 @@ class _FeedScreenState extends State<FeedScreen> {
           ),
           Expanded(
             child: Container(
-              decoration: const BoxDecoration(color: Colors.white),
-              child: FutureBuilder<List<Post>>(
-                future: _posts,
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  } else if (snapshot.hasError) {
-                    return Center(
-                      child: SelectableText(
-                        'Error: ${snapshot.error}',
-                        style: GoogleFonts.poppins(color: Colors.red),
-                      ),
-                    );
-                  } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                    return Center(
-                      child: Text(
-                        'No posts available',
-                        style: GoogleFonts.poppins(fontSize: 16),
-                      ),
-                    );
-                  }
-
-                  final posts = snapshot.data!;
-                  return ListView.builder(
-                    itemCount: posts.length,
-                    itemBuilder: (context, index) {
-                      final post = posts[index];
-                      return PostCard(
-                        post: post,
-                        profile: widget.profile,
-                        onRefresh: () => setState(() {
-                          _posts = _postService.getAllPosts();
-                        }),
+                decoration: const BoxDecoration(color: Colors.white),
+                child: FutureBuilder<List<Post>>(
+                  future: _posts,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    } else if (snapshot.hasError) {
+                      return Center(
+                        child: SelectableText(
+                          'Error: ${snapshot.error}',
+                          style: GoogleFonts.poppins(color: Colors.red),
+                        ),
                       );
-                    },
-                  );
-                },
-              ),
-            ),
+                    } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                      return Center(
+                        child: Text(
+                          'No posts available from your watchlist.',
+                          style: GoogleFonts.poppins(fontSize: 16),
+                        ),
+                      );
+                    }
+
+                    final posts = snapshot.data!;
+                    return ListView.builder(
+                      itemCount: posts.length,
+                      itemBuilder: (context, index) {
+                        final post = posts[index];
+                        return PostCard(
+                          post: post,
+                          profile: widget.profile,
+                          onRefresh: () => setState(() {
+                            _posts = _postService.getAllPosts();
+                          }),
+                        );
+                      },
+                    );
+                  },
+                )),
           ),
         ],
       ),

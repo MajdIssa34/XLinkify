@@ -42,7 +42,7 @@ app.use(cookieParser());
 
 // Configure CORS
 const allowedOrigins = [
-    "http://localhost:56954",
+    "http://localhost:50474",
     "http://localhost:60152"
 ];
 

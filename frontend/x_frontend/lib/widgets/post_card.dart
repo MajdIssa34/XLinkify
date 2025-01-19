@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:x_frontend/models/post.model.dart';
 import 'package:x_frontend/services/post_service.dart';
-import 'package:x_frontend/services/user_service.dart';
 import 'package:x_frontend/widgets/my_button.dart';
 import 'package:x_frontend/widgets/snack_bar.dart';
 
@@ -41,7 +40,7 @@ class _PostCardState extends State<PostCard> {
     }
   }
 
-  Future<void> _toggleLike({Function? onSuccess}) async {
+  Future<void> _toggleLike() async {
     try {
       final isLiked = widget.post.likes.contains(widget.profile['_id']);
       setState(() {
@@ -53,8 +52,6 @@ class _PostCardState extends State<PostCard> {
       });
 
       await _postService.toggleLike(widget.post.id, widget.profile['_id']);
-
-      if (onSuccess != null) onSuccess(); // Refresh dialog state
     } catch (error) {
       SnackBarUtil.showCustomSnackBar(
         context,
@@ -75,14 +72,12 @@ class _PostCardState extends State<PostCard> {
         user: User.fromJson(widget.profile),
       );
 
-      // Add the comment locally and refresh the dialog
       setState(() {
         post.comments.add(newComment);
         _commentController.clear();
       });
-      refreshDialog(); // Update the dialog UI immediately
+      refreshDialog();
 
-      // Update the backend
       await _postService.addComment(
         post.id,
         widget.profile['_id'],
@@ -101,7 +96,6 @@ class _PostCardState extends State<PostCard> {
   Widget build(BuildContext context) {
     final post = widget.post;
 
-    // Enforce that every post must have an image
     if (post.img == null || post.img!.isEmpty) {
       throw Exception("Each post must have an image.");
     }
@@ -198,10 +192,7 @@ class _PostCardState extends State<PostCard> {
                                 if (confirmed == true) {
                                   try {
                                     await _postService.deletePost(post.id);
-                                    setState(() {
-                                      // Immediately remove the post from the UI
-                                      widget.onRefresh();
-                                    });
+                                    widget.onRefresh();
                                     SnackBarUtil.showCustomSnackBar(
                                       context,
                                       'Post deleted successfully!',
@@ -268,7 +259,9 @@ class _PostCardState extends State<PostCard> {
                       onPressed: _toggleLike,
                     ),
                     Text(
-                      '${post.likes.length} Likes',
+                      post.likes.length == 1
+                          ? '${post.likes.length} Like'
+                          : '${post.likes.length} Likes',
                       style: GoogleFonts.poppins(
                         color: Colors.black,
                         fontSize: 16,
@@ -313,7 +306,7 @@ class _PostCardState extends State<PostCard> {
                         _addComment(
                             post: post,
                             refreshDialog: () {
-                              setState(() {}); // Refresh the dialog content
+                              setState(() {}); // Refresh dialog
                             });
                       },
                     ),
@@ -385,13 +378,12 @@ class _PostCardState extends State<PostCard> {
                         fontSize: 16,
                         color: Colors.grey[700],
                       ),
-                      textAlign: TextAlign.center,
                     ),
                     const Divider(),
                     _buildCommentsSection(post),
                     const Divider(),
                     _buildBottomSection(post, () {
-                      setDialogState(() {}); // Refresh the dialog state
+                      setDialogState(() {}); // Refresh dialog state
                     }),
                   ],
                 ),
@@ -414,59 +406,43 @@ class _PostCardState extends State<PostCard> {
 
   Widget _buildCommentsSection(Post post) {
     return post.comments.isNotEmpty
-        ? LayoutBuilder(
-            builder: (context, constraints) {
-              // Calculate the dynamic height based on the number of comments
-              double dynamicHeight =
-                  post.comments.length * 40.0; // Approx. height per comment
-              double maxHeight = 200; // Set the maximum height for the section
-
-              return SizedBox(
-                height: dynamicHeight > maxHeight
-                    ? maxHeight
-                    : dynamicHeight, // Use dynamic height or maxHeight
-                child: ListView.separated(
-                  shrinkWrap: true,
-                  physics: const BouncingScrollPhysics(),
-                  itemCount: post.comments.length,
-                  separatorBuilder: (_, __) => const Divider(height: 10),
-                  itemBuilder: (context, index) {
-                    final comment = post.comments[index];
-                    return Row(
+        ? ListView.builder(
+            shrinkWrap: true,
+            itemCount: post.comments.length,
+            itemBuilder: (context, index) {
+              final comment = post.comments[index];
+              return Row(
+                children: [
+                  CircleAvatar(
+                    backgroundImage: const AssetImage(
+                      'assets/images/placeholder.png',
+                    ),
+                    radius: 15,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        CircleAvatar(
-                          backgroundImage: const AssetImage(
-                            'assets/images/placeholder.png',
+                        Text(
+                          comment.user.username,
+                          style: GoogleFonts.poppins(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                            color: Colors.black,
                           ),
-                          radius: 15,
                         ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                comment.user.username,
-                                style: GoogleFonts.poppins(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
-                                  color: Colors.black,
-                                ),
-                              ),
-                              Text(
-                                comment.text,
-                                style: GoogleFonts.poppins(
-                                  fontSize: 12,
-                                  color: Colors.grey[700],
-                                ),
-                              ),
-                            ],
+                        Text(
+                          comment.text,
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            color: Colors.grey[700],
                           ),
                         ),
                       ],
-                    );
-                  },
-                ),
+                    ),
+                  ),
+                ],
               );
             },
           )
@@ -497,53 +473,19 @@ class _PostCardState extends State<PostCard> {
                     : Colors.black,
               ),
               onPressed: () {
-                _toggleLike(onSuccess: refreshDialog);
+                _toggleLike();
               },
             ),
-            if (post.likes.isNotEmpty)
-              FutureBuilder<String?>(
-                future:
-                    getLikedByFollower(post.likes, widget.profile['followers']),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return Text(
-                      'Loading likes...',
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        color: Colors.grey[700],
-                      ),
-                    );
-                  }
-                  if (snapshot.hasError) {
-                    return Text(
-                      'Error loading likes',
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        color: Colors.grey[700],
-                      ),
-                    );
-                  }
-
-                  final likedByFollower = snapshot.data;
-                  if (likedByFollower != null) {
-                    return Text(
-                      'Liked by $likedByFollower and ${post.likes.length - 1} others',
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        color: Colors.grey[700],
-                      ),
-                    );
-                  } else {
-                    return Text(
-                      'Liked by ${post.likes.length} ${post.likes.length == 1 ? 'person' : 'people'}',
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        color: Colors.grey[700],
-                      ),
-                    );
-                  }
-                },
+            Text(
+              post.likes.length == 1
+                  ? '${post.likes.length} Like'
+                  : '${post.likes.length} Likes',
+              style: GoogleFonts.poppins(
+                fontSize: 16,
+                color: Colors.black,
+                fontWeight: FontWeight.bold,
               ),
+            ),
           ],
         ),
         Row(
@@ -564,34 +506,15 @@ class _PostCardState extends State<PostCard> {
             IconButton(
               icon: const Icon(Icons.send, color: Colors.blue),
               onPressed: () {
-                _addComment(post: post, refreshDialog: refreshDialog);
+                _addComment(
+                  post: post,
+                  refreshDialog: refreshDialog,
+                );
               },
             ),
           ],
         ),
       ],
     );
-  }
-
-  Future<String?> getLikedByFollower(
-      List<dynamic> likes, List<dynamic> followers) async {
-    // Ensure both likes and followers are properly typed as List<String>
-    List<String> likeIds = likes.map((e) => e.toString()).toList();
-    List<String> followerIds = followers.map((e) => e.toString()).toList();
-
-    // Iterate through the likes to find a match in the followers
-    for (String like in likeIds) {
-      if (followerIds.contains(like)) {
-        try {
-          // Fetch the username of the liked user
-          return await UserService().getUsernameById(like);
-        } catch (error) {
-          // Handle any errors in fetching the username
-          debugPrint('Error fetching username for userId $like: $error');
-          continue; // Move to the next user if an error occurs
-        }
-      }
-    }
-    return null; // Return null if no follower liked the post
   }
 }

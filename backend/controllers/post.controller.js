@@ -113,7 +113,7 @@ export const likeUnlikePost = async (req, res) => {
         const userId = req.user._id;
         const { id: postId } = req.params;
 
-        const post = await Post.findById(postId);
+        const post = await Post.findById(postId).populate("user", "username");
 
         if (!post) {
             return res.status(404).json({ error: "Post not found" });
@@ -122,18 +122,20 @@ export const likeUnlikePost = async (req, res) => {
         const userLikedPost = post.likes.includes(userId);
 
         if (userLikedPost) {
-            // unlike post
+            // Unlike the post
             await Post.updateOne({ _id: postId }, { $pull: { likes: userId } });
             res.status(200).json({ message: "Post unliked successfully" });
         } else {
-            // like
+            // Like the post
             post.likes.push(userId);
             await post.save();
 
+            // Create a notification for the post owner
             const notification = new Notification({
                 from: userId,
-                to: post.user,
+                to: post.user._id,
                 type: "like",
+                description: `${req.user.username} liked your post.`,
             });
 
             await notification.save();
@@ -169,7 +171,7 @@ export const getAllPosts = async (req, res) => {
     }
 };
 
-export const getFollowingPosts = async (req, res) => {
+export const getWatchlistPosts = async (req, res) => {
 
     try {
         const userId = req.user._id;
@@ -179,9 +181,9 @@ export const getFollowingPosts = async (req, res) => {
             return res.status(404).json({ error: "User not found" });
         }
 
-        const following = user.following;
+        const watchlist = user.watchlist;
 
-        const feedPost = await Post.find({ user: { $in: following } }).sort({ createdAt: -1 })
+        const feedPost = await Post.find({ user: { $in: watchlist } }).sort({ createdAt: -1 })
             .populate({
                 path: "user",
                 select: "-password",

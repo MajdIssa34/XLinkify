@@ -1,11 +1,8 @@
 import 'dart:convert';
 import 'dart:typed_data';
-import 'dart:ui';
 import 'package:http/http.dart' as http;
 import 'package:flutter_session_jwt/flutter_session_jwt.dart';
 import 'package:x_frontend/models/post.model.dart';
-import 'package:image_picker/image_picker.dart';
-import 'dart:io';
 
 class PostService {
   static const String baseUrl = "http://localhost:8000/api/posts";
@@ -155,6 +152,26 @@ class PostService {
       return posts.length;
     } catch (error) {
       throw Exception('Failed to get user posts length: $error');
+    }
+  }
+
+  Future<List<Post>> getWatchlistPosts() async {
+    final token = await FlutterSessionJwt.retrieveToken(); // Retrieve token
+    final url = Uri.parse("$baseUrl/watchlist");
+
+    final response = await http.get(
+      url,
+      headers: {
+        "Authorization": "Bearer $token",
+      },
+    );
+
+    if (response.statusCode == 200) {
+      return (jsonDecode(response.body) as List)
+          .map((data) => Post.fromJson(data))
+          .toList();
+    } else {
+      throw Exception('Failed to fetch watchlist posts');
     }
   }
 }

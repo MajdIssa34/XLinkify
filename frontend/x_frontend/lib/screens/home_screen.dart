@@ -1,12 +1,9 @@
 import 'package:animations/animations.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
 import 'package:x_frontend/screens/internal_screens/feed_screen.dart';
+import 'package:x_frontend/screens/internal_screens/notification_screen.dart';
 import 'package:x_frontend/screens/internal_screens/profile_screen.dart';
-import 'package:x_frontend/services/user_service.dart';
-import 'package:x_frontend/state/user_state.dart';
-import 'package:x_frontend/widgets/snack_bar.dart';
 
 class HomeScreen extends StatefulWidget {
   final Map<String, dynamic> profile;
@@ -17,34 +14,28 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final UserService _userService = UserService();
-  late Future<List<dynamic>> _suggestedFriends;
   late List<Widget> _screens;
-
   int _selectedIndex = 0; // Track the selected index
 
   @override
   void initState() {
     super.initState();
 
-    // Set the initial profile in the UserState
-    final userState = Provider.of<UserState>(context, listen: false);
-    userState.setProfile(widget.profile);
-
     _screens = [
       FeedScreen(
-        profile: userState.profile, // Use profile from UserState
+        profile: widget.profile, // Use profile directly from widget
       ),
-      ProfileScreen(profile: userState.profile), // Use profile from UserState
+      ProfileScreen(
+        profile: widget.profile, // Use profile directly from widget
+      ),
+      NotificationsScreen(
+        profile: widget.profile, // Notifications Screen
+      ),
     ];
-
-    // Fetch suggested friends
-    _suggestedFriends = _userService.getSuggestedUsers();
   }
 
   @override
   Widget build(BuildContext context) {
-    final userState = Provider.of<UserState>(context); // Access UserState
     final screenWidth = MediaQuery.of(context).size.width;
 
     // Check for smaller screens
@@ -91,6 +82,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       const SizedBox(height: 20),
                       _buildNavItem(Icons.home, 'Feed', 0),
                       _buildNavItem(Icons.person, 'Profile', 1),
+                      _buildNavItem(Icons.notifications, 'Notifications', 2),
                     ],
                   ),
                   Padding(
@@ -147,32 +139,37 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
           ),
-          // Right-hand side (Suggested Friends)
+          // Right-hand side (Daily Highlights)
           if (_selectedIndex == 0) // Only show for Feed screen
             Flexible(
               flex: screenWidth > 1300 ? 2 : 2, // 20%
               child: Container(
                 color: const Color(0xFF1A1A2E),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment:
+                      MainAxisAlignment.center, // Center content vertically
+                  crossAxisAlignment:
+                      CrossAxisAlignment.center, // Center content horizontally
                   children: [
                     Padding(
                       padding: const EdgeInsets.all(16.0),
                       child: Row(
+                        mainAxisAlignment: MainAxisAlignment
+                            .center, // Center the avatar and text
                         children: [
                           CircleAvatar(
                             radius: 25,
                             backgroundImage: NetworkImage(
-                              userState.profile['profileImg'] ??
+                              widget.profile['profileImg'] ??
                                   "assets/images/placeholder.png",
                             ),
                           ),
                           const SizedBox(width: 12),
                           Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                            crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
                               Text(
-                                userState.profile['username'] ?? '',
+                                widget.profile['username'] ?? '',
                                 style: GoogleFonts.poppins(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
@@ -180,7 +177,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ),
                               ),
                               Text(
-                                userState.profile['fullName'] ?? '',
+                                widget.profile['fullName'] ?? '',
                                 style: GoogleFonts.poppins(
                                   fontSize: 14,
                                   color: Colors.grey,
@@ -191,157 +188,43 @@ class _HomeScreenState extends State<HomeScreen> {
                         ],
                       ),
                     ),
-                    // Suggested Friends List
-                    Flexible(
-                      flex: screenWidth > 1300 ? 4 : 2, // 20%
-                      child: Container(
-                        color: const Color(0xFF1A1A2E),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Divider(color: Colors.grey.shade800),
-                            Padding(
-                              padding: const EdgeInsets.all(16.0),
-                              child: Text(
-                                "Suggested for you",
-                                style: GoogleFonts.poppins(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
-                              ),
+                    Divider(color: Colors.grey.shade800),
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Text(
+                        "Daily Highlights",
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Center(
+                          child: Text(
+                            "\"The only limit to our realization of tomorrow is our doubts of today.\" \n\n- Franklin D. Roosevelt",
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              color: Colors.white,
+                              fontStyle: FontStyle.italic,
                             ),
-                            FutureBuilder<List<dynamic>>(
-                              future: _suggestedFriends,
-                              builder: (context, snapshot) {
-                                if (snapshot.connectionState ==
-                                    ConnectionState.waiting) {
-                                  return const Center(
-                                    child: CircularProgressIndicator(),
-                                  );
-                                } else if (snapshot.hasError) {
-                                  return Center(
-                                    child: Text(
-                                      'Error: ${snapshot.error}',
-                                      style: GoogleFonts.poppins(
-                                          color: Colors.redAccent),
-                                    ),
-                                  );
-                                } else if (!snapshot.hasData ||
-                                    snapshot.data!.isEmpty) {
-                                  return Center(
-                                    child: Text(
-                                      "No suggestions available",
-                                      style: GoogleFonts.poppins(
-                                          color: Colors.grey),
-                                    ),
-                                  );
-                                }
-
-                                final friends = snapshot.data!;
-                                return Expanded(
-                                  child: ListView.builder(
-                                    itemCount: friends.length,
-                                    itemBuilder: (context, index) {
-                                      final friend = friends[index];
-                                      return Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                            vertical: 8.0, horizontal: 16.0),
-                                        child: Container(
-                                          decoration: BoxDecoration(
-                                            color: const Color(0xFF1A1A2E),
-                                            borderRadius:
-                                                BorderRadius.circular(10),
-                                            boxShadow: [
-                                              BoxShadow(
-                                                color: Colors.black
-                                                    .withOpacity(0.1),
-                                                blurRadius: 5,
-                                                offset: const Offset(0, 3),
-                                              ),
-                                            ],
-                                          ),
-                                          child: ListTile(
-                                            leading: CircleAvatar(
-                                              backgroundImage: NetworkImage(
-                                                friend['profileImg'] ??
-                                                    "assets/images/placeholder.png",
-                                              ),
-                                              radius: 24,
-                                            ),
-                                            title: Text(
-                                              friend['username'] ?? '',
-                                              style: GoogleFonts.poppins(
-                                                fontSize: 12,
-                                                fontWeight: FontWeight.bold,
-                                                color: Colors.white,
-                                              ),
-                                            ),
-                                            subtitle: Text(
-                                              friend['fullName'] ?? '',
-                                              style: GoogleFonts.poppins(
-                                                fontSize: 10,
-                                                color: Colors.grey[400],
-                                              ),
-                                            ),
-                                            trailing: ElevatedButton(
-                                              onPressed: () async {
-                                                try {
-                                                  await _userService
-                                                      .followUser(
-                                                          friend['_id']);
-                                                  SnackBarUtil
-                                                      .showCustomSnackBar(
-                                                    context,
-                                                    'Followed ${friend['username']}!',
-                                                  );
-                                                  // Update UserState for following changes
-                                                  userState.toggleFollow(
-                                                      friend['_id']);
-                                                  setState(() {
-                                                    _suggestedFriends =
-                                                        _userService
-                                                            .getSuggestedUsers();
-                                                  });
-                                                } catch (e) {
-                                                  SnackBarUtil
-                                                      .showCustomSnackBar(
-                                                    context,
-                                                    'Error: ${e.toString()}',
-                                                    isError: true,
-                                                  );
-                                                }
-                                              },
-                                              style: ElevatedButton.styleFrom(
-                                                backgroundColor:
-                                                    Colors.blueAccent,
-                                                foregroundColor: Colors.white,
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                        vertical: 8.0,
-                                                        horizontal: 16.0),
-                                                shape: RoundedRectangleBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(8),
-                                                ),
-                                              ),
-                                              child: Text(
-                                                'Follow',
-                                                style: GoogleFonts.poppins(
-                                                  fontSize: 12,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                );
-                              },
-                            ),
-                          ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Center(
+                        child: Text(
+                          '© 2025 Linkify by Majd',
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            color: Colors.grey.shade500,
+                          ),
                         ),
                       ),
                     ),
@@ -374,9 +257,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   end: Alignment.bottomRight,
                 )
               : null,
-          color: isSelected
-              ? null
-              : Colors.black.withOpacity(0.1),
+          color: isSelected ? null : Colors.black.withOpacity(0.1),
           borderRadius: BorderRadius.circular(10),
           boxShadow: isSelected
               ? [

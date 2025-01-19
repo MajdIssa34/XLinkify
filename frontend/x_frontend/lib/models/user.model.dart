@@ -3,8 +3,7 @@ class User {
   final String username;
   final String fullName;
   final String email;
-  final List<String> followers;
-  final List<String> following;
+  final List<String> watchlist;
   final String profileImg;
   final String coverImg;
   final String bio;
@@ -15,8 +14,7 @@ class User {
     required this.username,
     required this.fullName,
     required this.email,
-    required this.followers,
-    required this.following,
+    required this.watchlist,
     required this.profileImg,
     required this.coverImg,
     required this.bio,
@@ -29,8 +27,7 @@ class User {
       username: json['username'],
       fullName: json['fullName'],
       email: json['email'],
-      followers: List<String>.from(json['followers'] ?? []),
-      following: List<String>.from(json['following'] ?? []),
+      watchlist: List<String>.from(json['watchlist'] ?? []),
       profileImg: json['profileImg'] ?? '',
       coverImg: json['coverImg'] ?? '',
       bio: json['bio'] ?? '',
@@ -44,8 +41,7 @@ class User {
       'username': username,
       'fullName': fullName,
       'email': email,
-      'followers': followers,
-      'following': following,
+      'watchlist' : watchlist,
       'profileImg': profileImg,
       'coverImg': coverImg,
       'bio': bio,

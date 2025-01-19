@@ -7,38 +7,38 @@ class UserService {
 
 
   
-  /// Fetch username by user ID
-  Future<String> getUsernameById(String userId) async {
-    final token = await FlutterSessionJwt.retrieveToken(); // Retrieve the token
-    if (token == null) {
-      throw Exception('No token found. User not logged in.');
-    }
+  // /// Fetch username by user ID
+  // Future<String> getUsernameById(String userId) async {
+  //   final token = await FlutterSessionJwt.retrieveToken(); // Retrieve the token
+  //   if (token == null) {
+  //     throw Exception('No token found. User not logged in.');
+  //   }
 
-    final url = Uri.parse("$baseUrl/username/$userId");
-    try {
-      final response = await http.get(
-        url,
-        headers: {
-          "Authorization": "Bearer $token"
-        }, // Add the token to the headers
-      );
+  //   final url = Uri.parse("$baseUrl/username/$userId");
+  //   try {
+  //     final response = await http.get(
+  //       url,
+  //       headers: {
+  //         "Authorization": "Bearer $token"
+  //       }, // Add the token to the headers
+  //     );
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        if (data.containsKey('username')) {
-          return data['username'];
-        } else {
-          throw Exception('Invalid response: Username not found');
-        }
-      } else {
-        final error =
-            jsonDecode(response.body)['message'] ?? 'Failed to fetch username';
-        throw Exception(error);
-      }
-    } catch (error) {
-      throw Exception('Error fetching username: $error');
-    }
-  }
+  //     if (response.statusCode == 200) {
+  //       final data = jsonDecode(response.body);
+  //       if (data.containsKey('username')) {
+  //         return data['username'];
+  //       } else {
+  //         throw Exception('Invalid response: Username not found');
+  //       }
+  //     } else {
+  //       final error =
+  //           jsonDecode(response.body)['message'] ?? 'Failed to fetch username';
+  //       throw Exception(error);
+  //     }
+  //   } catch (error) {
+  //     throw Exception('Error fetching username: $error');
+  //   }
+  // }
 
   /// Fetch user profile by username
   Future<Map<String, dynamic>> getUserProfile(String username) async {
@@ -68,14 +68,32 @@ class UserService {
     }
   }
 
+  Future<List<Map<String, dynamic>>> getUserWatchlist(String username) async {
+    final token = await FlutterSessionJwt.retrieveToken(); // Retrieve the token
+    if (token == null) {
+      throw Exception('No token found. User not logged in.');
+    }
+    final response = await http.get(Uri.parse("$baseUrl/watchlist/$username"),
+        headers: {
+          'Authorization': 'Bearer $token', // Replace with your auth token
+        });
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body) as List<dynamic>;
+      return data.map((e) => e as Map<String, dynamic>).toList();
+    } else {
+      throw Exception('Failed to fetch watchlist');
+    }
+  }
+
   /// Follow or unfollow a user
-  Future<void> followUser(String userId) async {
+  Future<void> addToWatchlist(String userId) async {
     final token = await FlutterSessionJwt.retrieveToken(); // Retrieve the token
     if (token == null) {
       throw Exception('No token found. User not logged in.');
     }
 
-    final url = Uri.parse("$baseUrl/follow/$userId");
+    final url = Uri.parse("$baseUrl/watchlist/$userId");
     try {
       final response = await http.post(
         url,
@@ -86,41 +104,41 @@ class UserService {
 
       if (response.statusCode != 200) {
         final error = jsonDecode(response.body)['message'] ??
-            'Failed to follow/unfollow user';
+            'Failed to add the user to the watchlist';
         throw Exception(error);
       }
     } catch (error) {
-      throw Exception('Error following user: $error');
+      throw Exception('Error adding to watch list user: $error');
     }
   }
 
-  /// Fetch suggested users
-  Future<List<dynamic>> getSuggestedUsers() async {
-    final token = await FlutterSessionJwt.retrieveToken(); // Retrieve the token
-    if (token == null) {
-      throw Exception('No token found. User not logged in.');
-    }
+  // /// Fetch suggested users
+  // Future<List<dynamic>> getSuggestedUsers() async {
+  //   final token = await FlutterSessionJwt.retrieveToken(); // Retrieve the token
+  //   if (token == null) {
+  //     throw Exception('No token found. User not logged in.');
+  //   }
 
-    final url = Uri.parse("$baseUrl/suggested");
-    try {
-      final response = await http.get(
-        url,
-        headers: {
-          "Authorization": "Bearer $token"
-        }, // Add the token to the headers
-      );
+  //   final url = Uri.parse("$baseUrl/suggested");
+  //   try {
+  //     final response = await http.get(
+  //       url,
+  //       headers: {
+  //         "Authorization": "Bearer $token"
+  //       }, // Add the token to the headers
+  //     );
 
-      if (response.statusCode == 200) {
-        return jsonDecode(response.body);
-      } else {
-        final error = jsonDecode(response.body)['message'] ??
-            'Failed to fetch suggested users';
-        throw Exception(error);
-      }
-    } catch (error) {
-      throw Exception('Error fetching suggested users: $error');
-    }
-  }
+  //     if (response.statusCode == 200) {
+  //       return jsonDecode(response.body);
+  //     } else {
+  //       final error = jsonDecode(response.body)['message'] ??
+  //           'Failed to fetch suggested users';
+  //       throw Exception(error);
+  //     }
+  //   } catch (error) {
+  //     throw Exception('Error fetching suggested users: $error');
+  //   }
+  // }
 
   /// Update user information
   Future<Map<String, dynamic>> updateUser(Map<String, dynamic> userData) async {
@@ -145,30 +163,31 @@ class UserService {
     }
   }
 
-  Future<Map<String, dynamic>> getUserFollowersFollowing() async {
-    final token = await FlutterSessionJwt.retrieveToken(); // Retrieve the token
-    if (token == null) {
-      throw Exception('No token found. User not logged in.');
-    }
+  // Future<Map<String, dynamic>> getUserFollowersFollowing() async {
+  //   final token = await FlutterSessionJwt.retrieveToken(); // Retrieve the token
+  //   if (token == null) {
+  //     throw Exception('No token found. User not logged in.');
+  //   }
 
-    final url = Uri.parse("$baseUrl/username");
-    try {
-      final response = await http.get(
-        url,
-        headers: {
-          "Authorization": "Bearer $token"
-        }, // Add the token to the headers
-      );
+  //   final url = Uri.parse("$baseUrl/username");
+  //   try {
+  //     final response = await http.get(
+  //       url,
+  //       headers: {
+  //         "Authorization": "Bearer $token"
+  //       }, // Add the token to the headers
+  //     );
 
-      if (response.statusCode == 200) {
-        return jsonDecode(response.body); // Return followers and following
-      } else {
-        final error = jsonDecode(response.body)['message'] ??
-            'Failed to fetch followers and following';
-        throw Exception(error);
-      }
-    } catch (error) {
-      throw Exception('Error fetching followers and following: $error');
-    }
-  }
+  //     if (response.statusCode == 200) {
+  //       return jsonDecode(response.body); // Return followers and following
+  //     } else {
+  //       final error = jsonDecode(response.body)['message'] ??
+  //           'Failed to fetch followers and following';
+  //       throw Exception(error);
+  //     }
+  //   } catch (error) {
+  //     throw Exception('Error fetching followers and following: $error');
+  //   }
+  // }
+
 }

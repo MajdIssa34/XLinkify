@@ -29,15 +29,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
-    final userState = Provider.of<UserState>(context, listen: false);
-    _userPosts = _postService.getUserPosts(userState.profile['username']);
+    _userPosts = _postService.getUserPosts(widget.profile['username']);
     _fetchPostCount();
   }
 
   Future<void> _fetchPostCount() async {
     try {
-      final userState = Provider.of<UserState>(context, listen: false);
-      final count = await _postService.getUserPostsLength(userState.profile['username']);
+      final count =
+          await _postService.getUserPostsLength(widget.profile['username']);
       setState(() {
         _postCount = count; // Cache the post count
       });
@@ -48,8 +47,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final userState = Provider.of<UserState>(context);
-    final profile = userState.profile;
+    final profile = widget.profile;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -112,7 +110,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                         builder: (context) => EditProfileScreen(
                                           profile: profile,
                                           onProfileUpdated: (updatedProfile) {
-                                            userState.setProfile(updatedProfile);
+                                            setState(() {
+                                              // Update the profile data directly
+                                              widget.profile
+                                                  .addAll(updatedProfile);
+                                            });
                                           },
                                         ),
                                       ),
@@ -134,37 +136,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               value: _postCount?.toString() ?? '...',
                             ),
                             GestureDetector(
-                              onTap: () {
-                                _showFollowerList(
-                                  context,
-                                  'Followers',
-                                  UserService()
-                                      .getUserFollowersFollowing()
-                                      .then((data) => data['followers']),
-                                );
+                              onTap: () async {
+                                try {
+                                  // Fetch the connection profiles once
+                                  final connectionProfiles = await UserService()
+                                      .getUserWatchlist(profile['username']);
+                                  _showConnectionsList(context, 'Connections',
+                                      connectionProfiles);
+                                } catch (error) {
+                                  SnackBarUtil.showCustomSnackBar(
+                                    context,
+                                    'Failed to fetch connections: ${error.toString()}',
+                                    isError: true,
+                                  );
+                                }
                               },
                               child: _buildStatItem(
                                 context,
-                                title: 'Followers',
-                                value: profile['followers']?.length.toString() ??
-                                    '0',
-                              ),
-                            ),
-                            GestureDetector(
-                              onTap: () {
-                                _showFollowerList(
-                                  context,
-                                  'Following',
-                                  UserService()
-                                      .getUserFollowersFollowing()
-                                      .then((data) => data['following']),
-                                );
-                              },
-                              child: _buildStatItem(
-                                context,
-                                title: 'Following',
-                                value: profile['following']?.length.toString() ??
-                                    '0',
+                                title: 'Connections',
+                                value:
+                                    profile['watchlist']?.length.toString() ??
+                                        '0',
                               ),
                             ),
                           ],
@@ -352,8 +344,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  void _showFollowerList(BuildContext context, String title,
-      Future<List<dynamic>> userListFuture) {
+  void _showConnectionsList(
+    BuildContext context,
+    String title,
+    List<Map<String, dynamic>> connections,
+  ) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.white,
@@ -361,144 +356,71 @@ class _ProfileScreenState extends State<ProfileScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) {
-        return FutureBuilder<List<dynamic>>(
-          future: userListFuture,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(
-                child: CircularProgressIndicator(),
-              );
-            } else if (snapshot.hasError) {
-              return Center(
-                child: Text(
-                  'Error: ${snapshot.error}',
-                  style: GoogleFonts.poppins(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.red,
-                  ),
+        return Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: GoogleFonts.poppins(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
                 ),
-              );
-            } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-              return Center(
-                child: Text(
-                  'No users found',
-                  style: GoogleFonts.poppins(
-                    fontSize: 14,
-                    color: Colors.grey[700],
-                  ),
-                ),
-              );
-            }
-
-            final users = snapshot.data!;
-            return StatefulBuilder(
-              builder: (context, setModalState) {
-                return Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Title
-                      Text(
-                        title,
-                        style: GoogleFonts.poppins(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      // User List
-                      Expanded(
-                        child: ListView.builder(
-                          itemCount: users.length,
-                          itemBuilder: (context, index) {
-                            final user = users[index];
-                            final userId = user['_id'];
-                            final isFollowing =
-                                widget.profile['following']?.contains(userId) ??
-                                    false;
-
-                            return Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: ListTile(
-                                leading: CircleAvatar(
-                                  backgroundImage: user['profileImg'] != null &&
-                                          user['profileImg'].isNotEmpty
-                                      ? NetworkImage(user['profileImg'])
-                                      : const AssetImage(
-                                              'assets/images/placeholder.png')
-                                          as ImageProvider,
-                                  radius: 24,
-                                ),
-                                title: Text(
-                                  user['username'] ?? 'Unknown',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.black,
-                                  ),
-                                ),
-                                subtitle: user['fullName'] != null
-                                    ? Text(
-                                        user['fullName'],
-                                        style: GoogleFonts.poppins(
-                                          fontSize: 12,
-                                          color: Colors.grey[600],
-                                        ),
-                                      )
-                                    : null,
-                                trailing: SizedBox(
-                                  height: 50,
-                                  width: 120,
-                                  child: MyButton(
-                                    onTap: () async {
-                                      try {
-                                        // Perform the follow/unfollow toggle
-                                        await UserService().followUser(userId);
-
-                                        // Update the state dynamically
-                                        setModalState(() {
-                                          if (isFollowing) {
-                                            widget.profile['following']
-                                                ?.remove(userId);
-                                          } else {
-                                            widget.profile['following']
-                                                ?.add(userId);
-                                          }
-                                        });
-
-                                        // Show a success message
-                                        SnackBarUtil.showCustomSnackBar(
-                                          context,
-                                          isFollowing
-                                              ? 'Unfollowed ${user['username']}'
-                                              : 'Followed ${user['username']}',
-                                        );
-                                      } catch (error) {
-                                        // Show an error message
-                                        SnackBarUtil.showCustomSnackBar(
-                                          context,
-                                          'Error: ${error.toString()}',
-                                          isError: true,
-                                        );
-                                      }
-                                    },
-                                    str: isFollowing ? 'Unfollow' : 'Follow',
-                                  ),
+              ),
+              const SizedBox(height: 10),
+              Expanded(
+                child: connections.isNotEmpty
+                    ? ListView.builder(
+                        itemCount: connections.length,
+                        itemBuilder: (context, index) {
+                          final user = connections[index];
+                          return Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: ListTile(
+                              leading: CircleAvatar(
+                                backgroundImage: user['profileImg'] != null &&
+                                        user['profileImg'].isNotEmpty
+                                    ? NetworkImage(user['profileImg'])
+                                    : const AssetImage(
+                                            'assets/images/placeholder.png')
+                                        as ImageProvider,
+                                radius: 24,
+                              ),
+                              title: Text(
+                                user['username'] ?? 'Unknown',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black,
                                 ),
                               ),
-                            );
-                          },
+                              subtitle: user['fullName'] != null
+                                  ? Text(
+                                      user['fullName'],
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 12,
+                                        color: Colors.grey[600],
+                                      ),
+                                    )
+                                  : null,
+                            ),
+                          );
+                        },
+                      )
+                    : Center(
+                        child: Text(
+                          'No connections found.',
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            color: Colors.grey,
+                          ),
                         ),
                       ),
-                    ],
-                  ),
-                );
-              },
-            );
-          },
+              ),
+            ],
+          ),
         );
       },
     );
@@ -634,28 +556,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           );
   }
 
-  Future<String?> getLikedByFollower(
-      List<dynamic> likes, List<dynamic> followers) async {
-    // Ensure both likes and followers are properly typed as List<String>
-    List<String> likeIds = likes.map((e) => e.toString()).toList();
-    List<String> followerIds = followers.map((e) => e.toString()).toList();
-
-    // Iterate through the likes to find a match in the followers
-    for (String like in likeIds) {
-      if (followerIds.contains(like)) {
-        try {
-          // Fetch the username of the liked user
-          return await UserService().getUsernameById(like);
-        } catch (error) {
-          // Handle any errors in fetching the username
-          debugPrint('Error fetching username for userId $like: $error');
-          continue; // Move to the next user if an error occurs
-        }
-      }
-    }
-    return null; // Return null if no follower liked the post
-  }
-
   Widget _buildBottomSection(Post post, void Function() refreshDialog) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -676,48 +576,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
               },
             ),
             if (post.likes.isNotEmpty)
-              FutureBuilder<String?>(
-                future:
-                    getLikedByFollower(post.likes, widget.profile['followers']),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return Text(
-                      'Loading likes...',
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        color: Colors.grey[700],
-                      ),
-                    );
-                  }
-                  if (snapshot.hasError) {
-                    return Text(
-                      'Error loading likes',
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        color: Colors.grey[700],
-                      ),
-                    );
-                  }
-
-                  final likedByFollower = snapshot.data;
-                  if (likedByFollower != null) {
-                    return Text(
-                      'Liked by $likedByFollower and ${post.likes.length - 1} others',
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        color: Colors.grey[700],
-                      ),
-                    );
-                  } else {
-                    return Text(
-                      'Liked by ${post.likes.length} ${post.likes.length == 1 ? 'person' : 'people'}',
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        color: Colors.grey[700],
-                      ),
-                    );
-                  }
-                },
+              Text(
+                '${post.likes.length} ${post.likes.length == 1 ? 'like' : 'likes'}',
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  color: Colors.grey[700],
+                ),
               ),
           ],
         ),

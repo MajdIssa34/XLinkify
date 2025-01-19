@@ -35,9 +35,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       final count =
           await _postService.getUserPostsLength(widget.profile['username']);
-      setState(() {
-        _postCount = count; // Cache the post count
-      });
+      if (mounted) {
+        setState(() {
+          _postCount = count; // Cache the post count
+        });
+      }
     } catch (error) {
       debugPrint('Error fetching post count: $error');
     }
@@ -413,33 +415,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                             .addToWatchlist(user['_id']);
                                         if (result['action'] == 'removed') {
                                           setModalState(() {
-                                            connections.removeAt(
-                                                index); // Remove from modal state
+                                            connections.removeAt(index);
                                           });
                                           setState(() {
-                                            // Update the list of IDs to reflect the change
                                             widget.profile['watchlist'] = widget
                                                 .profile['watchlist']
                                                 .where(
                                                     (id) => id != user['_id'])
                                                 .toList();
                                           });
-                                          SnackBarUtil.showCustomSnackBar(
-                                            context,
-                                            '${user['username']} has been removed from your watchlist.',
-                                          );
                                         } else if (result['action'] ==
                                             'added') {
                                           setState(() {
-                                            // Add the ID back to the list
                                             widget.profile['watchlist']
                                                 .add(user['_id']);
                                           });
-                                          SnackBarUtil.showCustomSnackBar(
-                                            context,
-                                            '${user['username']} has been added to your watchlist.',
-                                          );
                                         }
+                                        setState(() {
+                                          // Update the connection count dynamically
+                                          widget.profile['watchlistCount'] =
+                                              connections.length;
+                                        });
+                                        SnackBarUtil.showCustomSnackBar(
+                                          context,
+                                          '${user['username']} has been ${result['action']} to your watchlist.',
+                                        );
                                       } catch (error) {
                                         SnackBarUtil.showCustomSnackBar(
                                           context,

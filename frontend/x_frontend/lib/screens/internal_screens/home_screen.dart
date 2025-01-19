@@ -2,8 +2,10 @@ import 'package:animations/animations.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:x_frontend/screens/internal_screens/feed_screen.dart';
+import 'package:x_frontend/screens/internal_screens/information_screen.dart';
 import 'package:x_frontend/screens/internal_screens/notification_screen.dart';
 import 'package:x_frontend/screens/internal_screens/profile_screen.dart';
+import 'package:x_frontend/screens/internal_screens/search_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final Map<String, dynamic> profile;
@@ -31,6 +33,8 @@ class _HomeScreenState extends State<HomeScreen> {
       NotificationsScreen(
         profile: widget.profile, // Notifications Screen
       ),
+      SearchScreen(profile: widget.profile),
+      InformationScreen(),
     ];
   }
 
@@ -39,7 +43,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final screenWidth = MediaQuery.of(context).size.width;
 
     // Check for smaller screens
-    if (screenWidth < 1350) {
+    if (screenWidth < 1250) {
       return Scaffold(
         backgroundColor: Colors.black,
         body: Center(
@@ -83,6 +87,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       _buildNavItem(Icons.home, 'Feed', 0),
                       _buildNavItem(Icons.person, 'Profile', 1),
                       _buildNavItem(Icons.notifications, 'Notifications', 2),
+                      _buildNavItem(Icons.search, 'Search', 3),
+                      _buildNavItem(Icons.info_rounded, 'Information', 4),
                     ],
                   ),
                   Padding(
@@ -257,7 +263,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   end: Alignment.bottomRight,
                 )
               : null,
-          color: isSelected ? null : Colors.black.withOpacity(0.1),
+          color: isSelected ? null : const Color(0xFF1A1A2E),
           borderRadius: BorderRadius.circular(10),
           boxShadow: isSelected
               ? [

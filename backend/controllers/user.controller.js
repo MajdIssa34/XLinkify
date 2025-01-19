@@ -49,6 +49,7 @@ export const addToWatchlist = async (req, res) => {
             await User.findByIdAndUpdate(currentUserId, { $pull: { watchlist: id } }, { new: true });
             const updatedUser = await User.findById(currentUserId).select('watchlist');
             const updatedCount = updatedUser.watchlist.length; // Get the new count after update
+
             return res.status(200).json({
                 message: "Removed from watchlist",
                 action: "removed",
@@ -59,6 +60,17 @@ export const addToWatchlist = async (req, res) => {
             await User.findByIdAndUpdate(currentUserId, { $push: { watchlist: id } }, { new: true });
             const updatedUser = await User.findById(currentUserId).select('watchlist');
             const updatedCount = updatedUser.watchlist.length; // Get the new count after update
+
+            // Create a notification
+            const notification = new Notification({
+                to: id,
+                from: currentUserId,
+                type: 'watchlist',
+                description: `${currentUser.username} added you to their watchlist.`,
+                createdAt: new Date(),
+            });
+            await notification.save();
+
             return res.status(200).json({
                 message: "Added to watchlist",
                 action: "added",
@@ -70,6 +82,7 @@ export const addToWatchlist = async (req, res) => {
         return res.status(500).json({ error: "Internal server error" });
     }
 };
+
 
 
 
@@ -93,79 +106,27 @@ export const getUserWatchlist = async (req, res) => {
     }
 };
 
-// export const followUnfollowUser = async (req, res) => {
-//     try {
-//         const { id } = req.params;
-//         const userToModify = await User.findById(id);
-//         const currentUser = await User.findById(req.user._id);
-
-//         if (id === req.user._id.toString()) {
-//             return res.status(400).json({ error: "You can't follow/unfollow yourself" });
-//         }
-
-//         if (!userToModify || !currentUser) {
-//             return res.status(400).json({ error: "User not found" });
-//         }
-
-//         const isFollowing = currentUser.following.includes(id);
-
-//         if (isFollowing) {
-//             // unfollow
-//             await User.findByIdAndUpdate(id, { $pull: { followers: req.user._id } });
-//             await User.findByIdAndUpdate(req.user._id, { $pull: { following: id } });
-//             res.status(200).json({ message: "Unfollowed successfully" });
-//         } else {
-//             // follow
-//             await User.findByIdAndUpdate(id, { $push: { followers: req.user._id } });
-//             await User.findByIdAndUpdate(req.user._id, { $push: { following: id } });
-
-//             const newNotification = new Notification({
-//                 type: 'follow',
-//                 from: req.user._id,
-//                 to: userToModify._id,
-//             });
-
-//             await newNotification.save();
-
-//             // TODO:
-//             res.status(200).json({ message: "Followed successfully" });
-
-//         }
-//     } catch (error) {
-//         res.status(500).json({ message: "Internal server error" });
-//         console.log("Error in getUserProfile controller:", error.message);
-//     }
-// };
-
-// export const getSuggestedUsers = async (req, res) => {
-//     try {
-//         const userId = req.user._id;
-
-//         const usersFollowedByMe = await User.findById(userId).select("following");
-
-//         const users = await User.aggregate([
-//             {
-//                 $match: {
-//                     _id: { $ne: userId }
-//                 }
-//             },
-//             {
-//                 $sample: { size: 10 }
-//             }
-//         ]);
-
-//         const filteredUsers = users.filter(user => !usersFollowedByMe.following.includes(user._id));
-//         const suggestedUsers = filteredUsers.slice(0, 6);
-
-//         suggestedUsers.forEach(user => {
-//             user.password = null;
-//         });
-//         res.status(200).json(suggestedUsers);
-//     } catch (error) {
-
-//     }
-// };
-
+export const searchUsers = async (req, res) => {
+    try {
+      const { query } = req.query; // Search query from the frontend
+      if (!query) {
+        return res.status(400).json({ error: 'Query parameter is required' });
+      }
+  
+      const users = await User.find({
+        $or: [
+          { username: { $regex: query, $options: 'i' } }, // Match username
+          { fullName: { $regex: query, $options: 'i' } }, // Match full name
+        ],
+      }).select('username fullName profileImg'); // Limit fields for performance
+  
+      res.status(200).json({ users });
+    } catch (error) {
+      console.error('Error in searchUsers:', error.message);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  };
+  
 export const updateUser = async (req, res) => {
     const { fullName, username, email, currentPassword, newPassword, bio, link } = req.body;
     let { profileImg, coverImg } = req.body;
@@ -231,55 +192,3 @@ export const updateUser = async (req, res) => {
         console.log("Error in updateUser controller:", error.message);
     }
 };
-
-// export const getUserById = async (req, res) => {
-//     try {
-//         const { id } = req.params;
-//         const user = await User.findById(id, 'username profileImg'); // Select only username and profileImg
-
-//         if (!user) {
-//             return res.status(404).json({ message: 'User not found' });
-//         }
-
-//         res.status(200).json({
-//             username: user.username,
-//             profileImg: user.profileImg,
-//         });
-//     } catch (error) {
-//         console.error('Error fetching user details:', error);
-//         res.status(500).json({ message: 'Server error' });
-//     }
-
-// };
-
-// export const getUserFollowersFollowing = async (req, res) => {
-//     try {
-//         const userId = req.user._id; // Get current user ID
-
-//         // Find the user and populate both followers and following fields
-//         const user = await User.findById(userId)
-//             .select('followers following') // Select only followers and following fields
-//             .populate({
-//                 path: 'followers',
-//                 select: 'username profileImg', // Fetch username and profileImg for followers
-//             })
-//             .populate({
-//                 path: 'following',
-//                 select: 'username profileImg', // Fetch username and profileImg for following
-//             });
-
-//         if (!user) {
-//             return res.status(404).json({ message: 'User not found' });
-//         }
-
-//         // Respond with both followers and following
-//         res.status(200).json({
-//             followers: user.followers,
-//             following: user.following,
-//         });
-//     } catch (error) {
-//         console.error('Error fetching followers and following:', error);
-//         res.status(500).json({ message: 'Server error' });
-//     }
-// };
-

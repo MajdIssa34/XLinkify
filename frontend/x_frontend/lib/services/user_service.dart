@@ -101,11 +101,29 @@ class UserService {
 
     print('Response: ${response.body}');
 
-
     if (response.statusCode == 200) {
       return jsonDecode(response.body) as Map<String, dynamic>;
     } else {
       throw Exception('Failed to update watchlist: ${response.body}');
+    }
+  }
+
+  Future<List<dynamic>> searchUsers(String query) async {
+    final token = await FlutterSessionJwt.retrieveToken();
+    final url = Uri.parse("$baseUrl/search?query=$query");
+
+    final response = await http.get(
+      url,
+      headers: {
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body); // Decode the JSON response
+      return data['users']; // Extract the 'users' list
+    } else {
+      throw Exception('Failed to search users');
     }
   }
 

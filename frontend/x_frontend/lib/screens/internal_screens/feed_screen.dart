@@ -18,22 +18,26 @@ class FeedScreen extends StatefulWidget {
   _FeedScreenState createState() => _FeedScreenState();
 }
 
-class _FeedScreenState extends State<FeedScreen> {
+class _FeedScreenState extends State<FeedScreen>
+    with SingleTickerProviderStateMixin {
   final PostService _postService = PostService();
   final TextEditingController _textController = TextEditingController();
-  late Future<List<Post>> _posts;
+  late Future<List<Post>> _watchlistPosts;
+  late Future<List<Post>> _allPosts;
   Uint8List? _selectedImage;
+  late TabController _tabController;
 
   @override
   void initState() {
     super.initState();
-    _posts = _postService.getAllPosts();
+    _watchlistPosts = _postService.getWatchlistPosts();
+    _allPosts = _postService.getAllPosts();
+    _tabController = TabController(length: 2, vsync: this);
   }
 
   Future<void> _createPost() async {
     final text = _textController.text.trim();
 
-    // Enforce that an image is required for every post
     if (_selectedImage == null) {
       SnackBarUtil.showCustomSnackBar(
         context,
@@ -43,7 +47,6 @@ class _FeedScreenState extends State<FeedScreen> {
       return;
     }
 
-    // Show the loading indicator
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -62,7 +65,8 @@ class _FeedScreenState extends State<FeedScreen> {
       );
 
       setState(() {
-        _posts = _postService.getAllPosts();
+        _watchlistPosts = _postService.getWatchlistPosts();
+        _allPosts = _postService.getAllPosts();
         _selectedImage = null;
         _textController.clear();
       });
@@ -73,7 +77,7 @@ class _FeedScreenState extends State<FeedScreen> {
         isError: true,
       );
     } finally {
-      Navigator.pop(context); // Dismiss the loading dialog
+      Navigator.pop(context);
     }
   }
 
@@ -82,7 +86,6 @@ class _FeedScreenState extends State<FeedScreen> {
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
 
     if (pickedFile != null) {
-      // Show a loading indicator while processing the image
       showDialog(
         context: context,
         barrierDismissible: false,
@@ -103,9 +106,50 @@ class _FeedScreenState extends State<FeedScreen> {
           isError: true,
         );
       } finally {
-        Navigator.pop(context); // Dismiss the loading dialog
+        Navigator.pop(context);
       }
     }
+  }
+
+  Widget _buildPostList(Future<List<Post>> posts) {
+    return FutureBuilder<List<Post>>(
+      future: posts,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        } else if (snapshot.hasError) {
+          return Center(
+            child: SelectableText(
+              'Error: ${snapshot.error}',
+              style: GoogleFonts.poppins(color: Colors.red),
+            ),
+          );
+        } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return Center(
+            child: Text(
+              'No posts available.',
+              style: GoogleFonts.poppins(fontSize: 16),
+            ),
+          );
+        }
+
+        final posts = snapshot.data!;
+        return ListView.builder(
+          itemCount: posts.length,
+          itemBuilder: (context, index) {
+            final post = posts[index];
+            return PostCard(
+              post: post,
+              profile: widget.profile,
+              onRefresh: () => setState(() {
+                _watchlistPosts = _postService.getWatchlistPosts();
+                _allPosts = _postService.getAllPosts();
+              }),
+            );
+          },
+        );
+      },
+    );
   }
 
   @override
@@ -225,46 +269,32 @@ class _FeedScreenState extends State<FeedScreen> {
               ),
             ),
           ),
+          TabBar(
+            controller: _tabController,
+            indicatorColor: Colors.blueAccent,
+            tabs: [
+              Tab(               
+                child: Text(
+                  'Watchlist',
+                  style: GoogleFonts.poppins(fontSize: 12),
+                ),
+              ),
+              Tab(             
+                child: Text(
+                  'All Posts',
+                  style: GoogleFonts.poppins(fontSize: 12),
+                ),
+              ),
+            ],
+          ),
           Expanded(
-            child: Container(
-                decoration: const BoxDecoration(color: Colors.white),
-                child: FutureBuilder<List<Post>>(
-                  future: _posts,
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator());
-                    } else if (snapshot.hasError) {
-                      return Center(
-                        child: SelectableText(
-                          'Error: ${snapshot.error}',
-                          style: GoogleFonts.poppins(color: Colors.red),
-                        ),
-                      );
-                    } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                      return Center(
-                        child: Text(
-                          'No posts available from your watchlist.',
-                          style: GoogleFonts.poppins(fontSize: 16),
-                        ),
-                      );
-                    }
-
-                    final posts = snapshot.data!;
-                    return ListView.builder(
-                      itemCount: posts.length,
-                      itemBuilder: (context, index) {
-                        final post = posts[index];
-                        return PostCard(
-                          post: post,
-                          profile: widget.profile,
-                          onRefresh: () => setState(() {
-                            _posts = _postService.getAllPosts();
-                          }),
-                        );
-                      },
-                    );
-                  },
-                )),
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                _buildPostList(_watchlistPosts),
+                _buildPostList(_allPosts),
+              ],
+            ),
           ),
         ],
       ),

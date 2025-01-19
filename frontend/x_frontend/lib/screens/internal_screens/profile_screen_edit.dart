@@ -148,12 +148,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           child: Form(
             key: _formKey,
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Center(
-                  child: GestureDetector(
-                    onTap: _pickImage,
-                    child: Stack(
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Stack(
                       alignment: Alignment.center,
                       children: [
                         CircleAvatar(
@@ -167,7 +166,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                           const CircularProgressIndicator(), // Show loading on image upload
                       ],
                     ),
-                  ),
+                    const SizedBox(width: 16),
+                    Column(
+                      children: [
+                        MyButton(onTap: _pickImage, str: "Change Photo")                       
+                      ],
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 20),
                 MyTextField(

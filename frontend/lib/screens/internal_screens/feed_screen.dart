@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:x_frontend/models/post.model.dart';
+import 'package:x_frontend/screens/internal_screens/search_screen.dart';
 import 'package:x_frontend/services/post_service.dart';
 import 'package:x_frontend/widgets/my_button.dart';
 import 'package:x_frontend/widgets/my_text_field.dart';
@@ -126,9 +127,45 @@ class _FeedScreenState extends State<FeedScreen>
           );
         } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
           return Center(
-            child: Text(
-              'No posts available.',
-              style: GoogleFonts.poppins(fontSize: 16),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  'No posts available.',
+                  style: GoogleFonts.poppins(fontSize: 16),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Add people to your Watchlist to see their posts.',
+                  style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    // Navigate to the Search Screen directly
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => SearchScreen(
+                          profile: widget.profile,
+                        ),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.search, size: 18),
+                  label: Text(
+                    'Open Search',
+                    style: GoogleFonts.poppins(fontSize: 14),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blueAccent,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                  ),
+                ),
+              ],
             ),
           );
         }
@@ -273,15 +310,15 @@ class _FeedScreenState extends State<FeedScreen>
             controller: _tabController,
             indicatorColor: Colors.blueAccent,
             tabs: [
-              Tab(               
+              Tab(
                 child: Text(
-                  'Watchlist',
+                  'All Posts',
                   style: GoogleFonts.poppins(fontSize: 12),
                 ),
               ),
-              Tab(             
+              Tab(
                 child: Text(
-                  'All Posts',
+                  'Watchlist',
                   style: GoogleFonts.poppins(fontSize: 12),
                 ),
               ),
@@ -291,8 +328,8 @@ class _FeedScreenState extends State<FeedScreen>
             child: TabBarView(
               controller: _tabController,
               children: [
-                _buildPostList(_watchlistPosts),
                 _buildPostList(_allPosts),
+                _buildPostList(_watchlistPosts),
               ],
             ),
           ),

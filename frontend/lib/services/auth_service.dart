@@ -82,7 +82,6 @@ class AuthService {
     try {
       final response =
           await http.get(url, headers: {"Authorization": "Bearer $token"});
-      //print("Authorization Header: Bearer $token");
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       } else {

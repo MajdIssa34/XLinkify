@@ -3,6 +3,8 @@ import authRoutes from "./routes/auth.route.js";
 import userRoutes from "./routes/user.route.js";
 import postRoutes from "./routes/post.route.js";
 import notficationRoutes from "./routes/notification.route.js";
+import quoteRoutes from "./routes/quote.route.js";
+
 import cors from "cors"; // Keep this import (ES Modules)
 
 import { v2 as cloudinary } from "cloudinary";
@@ -42,14 +44,14 @@ app.use(cookieParser());
 
 // Configure CORS
 const allowedOrigins = [
-    "http://localhost:61030",
-    "http://localhost:60152"
+    "http://localhost:50320"
 ];
 
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/posts", postRoutes);
 app.use("/api/notifications", notficationRoutes);
+app.use("/api/quotes", quoteRoutes)
 
 app.listen(8000, () => {
     console.log("Server is running on port", PORT);

@@ -33,7 +33,6 @@ class _LoginScreenState extends State<LoginScreen> {
         _usernameController.text,
         _passwordController.text,
       );
-     //print(response['username']);
       // Replace the current screen with HomeScreen and clear the stack
       Navigator.pushAndRemoveUntil(
         context,

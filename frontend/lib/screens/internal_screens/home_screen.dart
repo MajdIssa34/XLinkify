@@ -1,4 +1,5 @@
 import 'package:animations/animations.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:x_frontend/screens/internal_screens/feed_screen.dart';
@@ -6,6 +7,8 @@ import 'package:x_frontend/screens/internal_screens/information_screen.dart';
 import 'package:x_frontend/screens/internal_screens/notification_screen.dart';
 import 'package:x_frontend/screens/internal_screens/profile_screen.dart';
 import 'package:x_frontend/screens/internal_screens/search_screen.dart';
+import 'package:x_frontend/services/auth_service.dart';
+import 'package:x_frontend/services/quote_service.dart';
 
 class HomeScreen extends StatefulWidget {
   final Map<String, dynamic> profile;
@@ -16,13 +19,16 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  QuoteService quoteService = QuoteService();
+  AuthService authService = AuthService();
   late List<Widget> _screens;
   int _selectedIndex = 0; // Track the selected index
+  String _quote = "Loading daily quote...";
+  String? _author;
 
   @override
   void initState() {
     super.initState();
-
     _screens = [
       FeedScreen(
         profile: widget.profile, // Use profile directly from widget
@@ -36,6 +42,23 @@ class _HomeScreenState extends State<HomeScreen> {
       SearchScreen(profile: widget.profile),
       InformationScreen(),
     ];
+
+    _fetchQuote();
+  }
+
+  Future<void> _fetchQuote() async {
+    try {
+      final quoteData = await quoteService.getDailyQuote(); // Fetch quote data
+      setState(() {
+        _quote = quoteData['quote'] ?? "No quote available.";
+        _author = quoteData['author'];
+      });
+    } catch (error) {
+      setState(() {
+        _quote = "Failed to fetch quote.";
+        _author = null;
+      });
+    }
   }
 
   @override
@@ -94,14 +117,48 @@ class _HomeScreenState extends State<HomeScreen> {
                   Padding(
                     padding: const EdgeInsets.all(16.0),
                     child: ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.pushReplacementNamed(context, '/login');
+                      onPressed: () async {
+                        // Call the logout method
+                        try {
+                          await AuthService()
+                              .logout(); // Ensure your AuthService has a logout method
+                          Navigator.pushReplacementNamed(
+                              context, '/login'); // Redirect to login screen
+                        } catch (error) {
+                          // Show an error message if logout fails
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'Logout failed: $error',
+                                style: GoogleFonts.poppins(color: Colors.white),
+                              ),
+                              backgroundColor: Colors.redAccent,
+                            ),
+                          );
+                        }
                       },
-                      icon: const Icon(Icons.logout),
-                      label: const Text('Logout'),
+                      icon: const Icon(
+                        Icons.logout,
+                        color: Colors.white,
+                        size: 18,
+                      ),
+                      label: const Text(
+                        'Logout',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                       style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 12),
                         backgroundColor: Colors.redAccent,
                         foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        elevation: 4,
+                        shadowColor: Colors.redAccent.withOpacity(0.5),
                       ),
                     ),
                   ),
@@ -153,15 +210,16 @@ class _HomeScreenState extends State<HomeScreen> {
                 color: const Color(0xFF1A1A2E),
                 child: Column(
                   mainAxisAlignment:
-                      MainAxisAlignment.center, // Center content vertically
+                      MainAxisAlignment.spaceBetween, // Space between items
                   crossAxisAlignment:
-                      CrossAxisAlignment.center, // Center content horizontally
+                      CrossAxisAlignment.center, // Center horizontally
                   children: [
+                    // Top Section: Avatar and Info
                     Padding(
                       padding: const EdgeInsets.all(16.0),
                       child: Row(
-                        mainAxisAlignment: MainAxisAlignment
-                            .center, // Center the avatar and text
+                        mainAxisAlignment:
+                            MainAxisAlignment.center, // Center horizontally
                         children: [
                           CircleAvatar(
                             radius: 25,
@@ -195,38 +253,90 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                     Divider(color: Colors.grey.shade800),
-                    Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Text(
-                        "Daily Highlights",
-                        style: GoogleFonts.poppins(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
+
+                    // Middle Section: Quote
                     Expanded(
                       child: Padding(
                         padding: const EdgeInsets.all(16.0),
-                        child: Center(
-                          child: Text(
-                            "\"The only limit to our realization of tomorrow is our doubts of today.\" \n\n- Franklin D. Roosevelt",
-                            textAlign: TextAlign.center,
-                            style: GoogleFonts.poppins(
-                              fontSize: 14,
-                              color: Colors.white,
-                              fontStyle: FontStyle.italic,
+                        child: Column(
+                          mainAxisAlignment:
+                              MainAxisAlignment.center, // Center vertically
+                          crossAxisAlignment:
+                              CrossAxisAlignment.center, // Center horizontally
+                          children: [
+                            Text(
+                              "Daily Highlights",
+                              style: GoogleFonts.poppins(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
                             ),
-                          ),
+                            const SizedBox(height: 16),
+                            FutureBuilder<Map<String, String>>(
+                              future: quoteService.getDailyQuote(),
+                              builder: (context, snapshot) {
+                                if (snapshot.connectionState ==
+                                    ConnectionState.waiting) {
+                                  return const Center(
+                                      child: CircularProgressIndicator());
+                                } else if (snapshot.hasError) {
+                                  return Padding(
+                                    padding: const EdgeInsets.all(16.0),
+                                    child: Text(
+                                      "Failed to fetch daily quote., ${snapshot.error}",
+                                      textAlign: TextAlign.center,
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 14,
+                                        color: Colors.redAccent,
+                                        fontStyle: FontStyle.italic,
+                                      ),
+                                    ),
+                                  );
+                                } else if (snapshot.hasData) {
+                                  final quote = snapshot.data?['quote'] ??
+                                      "No quote available.";
+                                  final author =
+                                      snapshot.data?['author'] ?? "Unknown";
+                                  return Padding(
+                                    padding: const EdgeInsets.all(16.0),
+                                    child: Text(
+                                      "\"$quote\" \n\n- $author",
+                                      textAlign: TextAlign.center,
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 14,
+                                        color: Colors.white,
+                                        fontStyle: FontStyle.italic,
+                                      ),
+                                    ),
+                                  );
+                                } else {
+                                  return Padding(
+                                    padding: const EdgeInsets.all(16.0),
+                                    child: Text(
+                                      "No quote available.",
+                                      textAlign: TextAlign.center,
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 14,
+                                        color: Colors.grey,
+                                        fontStyle: FontStyle.italic,
+                                      ),
+                                    ),
+                                  );
+                                }
+                              },
+                            ),
+                          ],
                         ),
                       ),
                     ),
+
+                    // Bottom Section: Footer
                     Padding(
                       padding: const EdgeInsets.all(8.0),
                       child: Center(
                         child: Text(
-                          '© 2025 Linkify by Majd',
+                          '© 2025 XLinkify by Majd',
                           style: GoogleFonts.poppins(
                             fontSize: 12,
                             color: Colors.grey.shade500,
@@ -237,7 +347,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
               ),
-            ),
+            )
         ],
       ),
     );

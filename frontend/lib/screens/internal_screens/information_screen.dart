@@ -9,7 +9,7 @@ class InformationScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'About Linkify',
+          'About XLinkify',
           style: GoogleFonts.poppins(
             fontWeight: FontWeight.bold,
             color: Colors.black,
@@ -62,7 +62,7 @@ class InformationScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        'Welcome to Linkify',
+                        'Welcome to XLinkify',
                         style: GoogleFonts.poppins(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
@@ -75,7 +75,7 @@ class InformationScreen extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               Text(
-                'What is Linkify?',
+                'What is XLinkify?',
                 style: GoogleFonts.poppins(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -83,7 +83,7 @@ class InformationScreen extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                'Linkify is your personalized social media experience designed to connect you with your friends and the world. '
+                'XLinkify is your personalized social media experience designed to connect you with your friends and the world. '
                 'With features like the Watchlist and World Feed, you can control what you see and share your thoughts creatively.',
                 style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey[800]),
               ),
@@ -125,7 +125,7 @@ class InformationScreen extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                'I am Majd, the creator of Linkify. I designed this platform to provide a balance between personalization and exploration. '
+                'I am Majd, the creator of XLinkify. I designed this platform to provide a balance between personalization and exploration. '
                 'Feel free to explore and share your creativity with the community!',
                 style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey[800]),
               ),
@@ -174,7 +174,7 @@ class InformationScreen extends StatelessWidget {
               const SizedBox(height: 16),
               Center(
                 child: Text(
-                  'Thank you for being part of Linkify!',
+                  'Thank you for being part of XLinkify!',
                   style: GoogleFonts.poppins(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,

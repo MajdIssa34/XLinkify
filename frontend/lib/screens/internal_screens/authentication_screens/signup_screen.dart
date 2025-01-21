@@ -37,7 +37,6 @@ class _SignupScreenState extends State<SignupScreen> {
           "password": _passwordController.text,
         });
         // Handle successful signup
-        print("Signup successful");
         Navigator.pop(context); // Navigate back to login screen
       } catch (error) {
         setState(() {

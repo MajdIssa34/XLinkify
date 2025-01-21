@@ -5,39 +5,6 @@ import 'package:http/http.dart' as http;
 class UserService {
   static const String baseUrl = "http://localhost:8000/api/users";
 
-  // /// Fetch username by user ID
-  // Future<String> getUsernameById(String userId) async {
-  //   final token = await FlutterSessionJwt.retrieveToken(); // Retrieve the token
-  //   if (token == null) {
-  //     throw Exception('No token found. User not logged in.');
-  //   }
-
-  //   final url = Uri.parse("$baseUrl/username/$userId");
-  //   try {
-  //     final response = await http.get(
-  //       url,
-  //       headers: {
-  //         "Authorization": "Bearer $token"
-  //       }, // Add the token to the headers
-  //     );
-
-  //     if (response.statusCode == 200) {
-  //       final data = jsonDecode(response.body);
-  //       if (data.containsKey('username')) {
-  //         return data['username'];
-  //       } else {
-  //         throw Exception('Invalid response: Username not found');
-  //       }
-  //     } else {
-  //       final error =
-  //           jsonDecode(response.body)['message'] ?? 'Failed to fetch username';
-  //       throw Exception(error);
-  //     }
-  //   } catch (error) {
-  //     throw Exception('Error fetching username: $error');
-  //   }
-  // }
-
   /// Fetch user profile by username
   Future<Map<String, dynamic>> getUserProfile(String username) async {
     final token = await FlutterSessionJwt.retrieveToken(); // Retrieve the token
@@ -98,8 +65,6 @@ class UserService {
         'Content-Type': 'application/json',
       },
     );
-
-    print('Response: ${response.body}');
 
     if (response.statusCode == 200) {
       return jsonDecode(response.body) as Map<String, dynamic>;

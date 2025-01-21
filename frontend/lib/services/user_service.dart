@@ -3,7 +3,7 @@ import 'package:flutter_session_jwt/flutter_session_jwt.dart';
 import 'package:http/http.dart' as http;
 
 class UserService {
-  static const String baseUrl = "http://localhost:8000/api/users";
+  static const String baseUrl = "https://xlinkify.onrender.com/api/users";
 
   /// Fetch user profile by username
   Future<Map<String, dynamic>> getUserProfile(String username) async {
@@ -57,7 +57,7 @@ class UserService {
       throw Exception('No token found. User not logged in.');
     }
 
-    final url = Uri.parse('http://localhost:8000/api/users/watchlist/$userId');
+    final url = Uri.parse('https://xlinkify.onrender.com/api/users/watchlist/$userId');
     final response = await http.put(
       url,
       headers: {

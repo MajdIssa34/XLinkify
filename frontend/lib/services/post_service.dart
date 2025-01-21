@@ -5,7 +5,7 @@ import 'package:flutter_session_jwt/flutter_session_jwt.dart';
 import 'package:x_frontend/models/post.model.dart';
 
 class PostService {
-  static const String baseUrl = "http://localhost:8000/api/posts";
+  static const String baseUrl = "https://xlinkify.onrender.com/api/posts";
 
   /// Fetch all posts
   Future<List<Post>> getAllPosts() async {

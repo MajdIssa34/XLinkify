@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 class QuoteService {
-  static const String baseUrl = "http://localhost:8000/api/quotes";
+  static const String baseUrl = "https://xlinkify.onrender.com/api/quotes";
 
   Future<Map<String, String>> getDailyQuote() async {
     final token = await FlutterSessionJwt.retrieveToken(); // Retrieve the token

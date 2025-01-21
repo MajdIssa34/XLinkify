@@ -3,7 +3,7 @@ import 'package:flutter_session_jwt/flutter_session_jwt.dart';
 import 'package:http/http.dart' as http;
 
 class AuthService {
-  static const String baseUrl = "http://localhost:8000/api/auth";
+  static const String baseUrl = "https://xlinkify.onrender.com/api/auth";
 
   /// Login the user and save the JWT token
   Future<Map<String, dynamic>> login(String username, String password) async {

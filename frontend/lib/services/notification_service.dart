@@ -3,7 +3,7 @@ import 'package:flutter_session_jwt/flutter_session_jwt.dart';
 import 'package:http/http.dart' as http;
 
 class NotificationService {
-  static const String baseUrl = "http://localhost:8000/api/notifications";
+  static const String baseUrl = "https://xlinkify.onrender.com/api/notifications";
 
   /// Fetch notifications for the logged-in user
   Future<List<dynamic>> getNotifications() async {

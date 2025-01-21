@@ -123,7 +123,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           await AuthService()
                               .logout(); // Ensure your AuthService has a logout method
                           Navigator.pushReplacementNamed(
-                              context, '/login'); // Redirect to login screen
+                              context, '/'); // Redirect to login screen
                         } catch (error) {
                           // Show an error message if logout fails
                           ScaffoldMessenger.of(context).showSnackBar(

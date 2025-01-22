@@ -28,7 +28,7 @@ const allowedOrigins = [
     "https://xlinkify.web.app", // Your frontend development server
     "https://xlinkify.onrender.com", // Add your production URL here
     "https://xlinkify.firebaseapp.com",
-    "https://xlinkify.com"
+    "https://xlinkify.com",
 ];
 
 // CORS Middleware
@@ -63,6 +63,5 @@ app.use("/api/quotes", quoteRoutes);
 
 // Server Start
 app.listen(PORT, () => {
-    console.log("Server is running on port", PORT);
     connectMongoDB();
 });

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:x_frontend/screens/internal_screens/profile_screen.dart';
 import 'package:x_frontend/services/user_service.dart';
 import 'package:x_frontend/widgets/snack_bar.dart';
 
@@ -16,6 +17,7 @@ class _SearchScreenState extends State<SearchScreen> {
   final TextEditingController _searchController = TextEditingController();
   List<dynamic> _searchResults = [];
   bool _isLoading = false;
+  int? _hoveredIndex;
 
   Future<void> _searchUsers(String query) async {
     setState(() {
@@ -26,7 +28,9 @@ class _SearchScreenState extends State<SearchScreen> {
       final results = await UserService().searchUsers(query);
       if (mounted) {
         setState(() {
-          _searchResults = results.where((user) => user['_id'] != widget.profile['_id']).toList(); // Exclude self
+          _searchResults = results
+              .where((user) => user['_id'] != widget.profile['_id'])
+              .toList(); // Exclude self
         });
       }
     } catch (error) {
@@ -134,65 +138,86 @@ class _SearchScreenState extends State<SearchScreen> {
                             final user = _searchResults[index];
                             final isInWatchlist = widget.profile['watchlist']
                                 .contains(user['_id']);
+                            final isHovered = _hoveredIndex == index;
 
-                            return Card(
-                              margin: const EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 8),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              elevation: 2,
-                              child: ListTile(
-                                leading: CircleAvatar(
-                                  backgroundImage: user['profileImg'] != null &&
-                                          user['profileImg'].isNotEmpty
-                                      ? NetworkImage(user['profileImg'])
-                                      : const AssetImage(
-                                              'assets/images/placeholder.png')
-                                          as ImageProvider,
-                                  radius: 25,
-                                ),
-                                title: Text(
-                                  user['username'] ?? 'Unknown User',
-                                  style: GoogleFonts.poppins(
-                                    fontWeight: FontWeight.bold,
+                            return GestureDetector(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => ProfileScreen(
+                                      profile: user,
+                                    ),
                                   ),
-                                ),
-                                subtitle: Text(
-                                  user['fullName'] ?? 'No full name provided',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 12,
-                                    color: Colors.grey,
+                                );
+                              },
+                              child: MouseRegion(
+                                onEnter: (_) => setState(() => _hoveredIndex = index),
+                                onExit: (_) => setState(() => _hoveredIndex = null),
+                                child: Card(
+                                  margin: const EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 8),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
                                   ),
-                                ),
-                                trailing: user['_id'] == widget.profile['_id']
-                                    ? null // Hide button for self
-                                    : ElevatedButton(
-                                        onPressed: () {
-                                          _toggleWatchlist(
-                                            user['_id'],
-                                            user['username'],
-                                          );
-                                        },
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: isInWatchlist
-                                              ? Colors.redAccent
-                                              : Colors.blueAccent,
-                                          foregroundColor: Colors.white,
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(10),
-                                          ),
-                                        ),
-                                        child: Text(
-                                          isInWatchlist
-                                              ? 'Remove from Watchlist'
-                                              : 'Add to Watchlist',
-                                          style: GoogleFonts.poppins(
-                                            fontSize: 12,
-                                          ),
-                                        ),
+                                  elevation: 2,
+                                  child: ListTile(
+                                    leading: CircleAvatar(
+                                      backgroundImage: user['profileImg'] !=
+                                                  null &&
+                                              user['profileImg'].isNotEmpty
+                                          ? NetworkImage(user['profileImg'])
+                                          : const AssetImage(
+                                                  'assets/images/placeholder.png')
+                                              as ImageProvider,
+                                      radius: 25,
+                                    ),
+                                    title: Text(
+                                      user['username'] ?? 'Unknown User',
+                                      style: GoogleFonts.poppins(
+                                        fontWeight: FontWeight.bold,
+                                        color: isHovered
+                                            ? Colors.blue
+                                            : Colors.black,
                                       ),
+                                    ),
+                                    subtitle: Text(
+                                      user['fullName'] ?? 'No full name provided',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 12,
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                                    trailing: user['_id'] == widget.profile['_id']
+                                        ? null // Hide button for self
+                                        : ElevatedButton(
+                                            onPressed: () {
+                                              _toggleWatchlist(
+                                                user['_id'],
+                                                user['username'],
+                                              );
+                                            },
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: isInWatchlist
+                                                  ? Colors.redAccent
+                                                  : Colors.blueAccent,
+                                              foregroundColor: Colors.white,
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(10),
+                                              ),
+                                            ),
+                                            child: Text(
+                                              isInWatchlist
+                                                  ? 'Remove from Watchlist'
+                                                  : 'Add to Watchlist',
+                                              style: GoogleFonts.poppins(
+                                                fontSize: 12,
+                                              ),
+                                            ),
+                                          ),
+                                  ),
+                                ),
                               ),
                             );
                           },

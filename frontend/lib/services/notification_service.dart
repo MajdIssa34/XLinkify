@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 
 class NotificationService {
   static const String baseUrl = "https://xlinkify.onrender.com/api/notifications";
-
+  
   /// Fetch notifications for the logged-in user
   Future<List<dynamic>> getNotifications() async {
     final token = await FlutterSessionJwt.retrieveToken(); // Retrieve the token

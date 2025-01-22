@@ -57,7 +57,7 @@ class UserService {
       throw Exception('No token found. User not logged in.');
     }
 
-    final url = Uri.parse('https://xlinkify.onrender.com/api/users/watchlist/$userId');
+    final url = Uri.parse('$baseUrl/watchlist/$userId');
     final response = await http.put(
       url,
       headers: {
@@ -92,34 +92,6 @@ class UserService {
     }
   }
 
-  // /// Fetch suggested users
-  // Future<List<dynamic>> getSuggestedUsers() async {
-  //   final token = await FlutterSessionJwt.retrieveToken(); // Retrieve the token
-  //   if (token == null) {
-  //     throw Exception('No token found. User not logged in.');
-  //   }
-
-  //   final url = Uri.parse("$baseUrl/suggested");
-  //   try {
-  //     final response = await http.get(
-  //       url,
-  //       headers: {
-  //         "Authorization": "Bearer $token"
-  //       }, // Add the token to the headers
-  //     );
-
-  //     if (response.statusCode == 200) {
-  //       return jsonDecode(response.body);
-  //     } else {
-  //       final error = jsonDecode(response.body)['message'] ??
-  //           'Failed to fetch suggested users';
-  //       throw Exception(error);
-  //     }
-  //   } catch (error) {
-  //     throw Exception('Error fetching suggested users: $error');
-  //   }
-  // }
-
   /// Update user information
   Future<Map<String, dynamic>> updateUser(Map<String, dynamic> userData) async {
     final token = await FlutterSessionJwt.retrieveToken(); // Example for token
@@ -141,31 +113,4 @@ class UserService {
       throw Exception('Failed to update profile: ${response.body}');
     }
   }
-
-  // Future<Map<String, dynamic>> getUserFollowersFollowing() async {
-  //   final token = await FlutterSessionJwt.retrieveToken(); // Retrieve the token
-  //   if (token == null) {
-  //     throw Exception('No token found. User not logged in.');
-  //   }
-
-  //   final url = Uri.parse("$baseUrl/username");
-  //   try {
-  //     final response = await http.get(
-  //       url,
-  //       headers: {
-  //         "Authorization": "Bearer $token"
-  //       }, // Add the token to the headers
-  //     );
-
-  //     if (response.statusCode == 200) {
-  //       return jsonDecode(response.body); // Return followers and following
-  //     } else {
-  //       final error = jsonDecode(response.body)['message'] ??
-  //           'Failed to fetch followers and following';
-  //       throw Exception(error);
-  //     }
-  //   } catch (error) {
-  //     throw Exception('Error fetching followers and following: $error');
-  //   }
-  // }
 }

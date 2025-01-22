@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:x_frontend/models/post.model.dart';
 import 'package:x_frontend/screens/internal_screens/profile_screen_edit.dart';
+import 'package:x_frontend/services/auth_service.dart';
 import 'package:x_frontend/services/user_service.dart';
 import 'package:x_frontend/widgets/my_button.dart';
 import 'package:x_frontend/widgets/snack_bar.dart';
@@ -19,10 +20,11 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   late Future<List<Post>> _userPosts;
+  final AuthService _authService = AuthService();
   final PostService _postService = PostService();
   final TextEditingController _commentController = TextEditingController();
-  int? _postCount; // Cache the number of posts
-  int? _hoveredIndex; // Track the hovered index
+  int? _postCount;
+  int? _hoveredIndex;
 
   @override
   void initState() {
@@ -37,7 +39,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           await _postService.getUserPostsLength(widget.profile['username']);
       if (mounted) {
         setState(() {
-          _postCount = count; // Cache the post count
+          _postCount = count;
         });
       }
     } catch (error) {
@@ -88,42 +90,121 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       children: [
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 20),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.start,
-                            children: [
-                              Text(
-                                profile['username'] ?? 'Unknown User',
-                                style: GoogleFonts.poppins(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 24,
-                                ),
-                              ),
-                              const SizedBox(width: 20),
-                              SizedBox(
-                                height: 45,
-                                width: 200,
-                                child: MyButton(
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => EditProfileScreen(
-                                          profile: profile,
-                                          onProfileUpdated: (updatedProfile) {
-                                            setState(() {
-                                              // Update the profile data directly
-                                              widget.profile
-                                                  .addAll(updatedProfile);
-                                            });
-                                          },
+                          child: FutureBuilder<Map<String, dynamic>>(
+                            future: _authService.getUserDetails(),
+                            builder: (context, snapshot) {
+                              if (snapshot.connectionState ==
+                                  ConnectionState.waiting) {
+                                return const CircularProgressIndicator();
+                              } else if (snapshot.hasError) {
+                                return Text(
+                                  'Error: ${snapshot.error}',
+                                  style: GoogleFonts.poppins(color: Colors.red),
+                                );
+                              } else if (!snapshot.hasData ||
+                                  snapshot.data == null) {
+                                return Text(
+                                  'Unable to fetch user details.',
+                                  style:
+                                      GoogleFonts.poppins(color: Colors.grey),
+                                );
+                              }
+
+                              final userDetails = snapshot.data!;
+                              final isOwnProfile =
+                                  userDetails['_id'] == profile['_id'];
+                              final isInWatchlist = userDetails['watchlist']
+                                  .contains(profile['_id']); // Check watchlist
+
+                              return Row(
+                                mainAxisAlignment: MainAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    profile['username'] ?? 'Unknown User',
+                                    style: GoogleFonts.poppins(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 24,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 20),
+                                  if (isOwnProfile)
+                                    SizedBox(
+                                      height: 45,
+                                      width: 200,
+                                      child: MyButton(
+                                        onTap: () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) =>
+                                                  EditProfileScreen(
+                                                profile: profile,
+                                                onProfileUpdated:
+                                                    (updatedProfile) {
+                                                  setState(() {
+                                                    widget.profile
+                                                        .addAll(updatedProfile);
+                                                  });
+                                                },
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                        str: "Edit Profile",
+                                      ),
+                                    ),
+                                  if (!isOwnProfile)
+                                    SizedBox(
+                                      height: 45,
+                                      width: 200,
+                                      child: ElevatedButton(
+                                        onPressed: () async {
+                                          try {
+                                            final result = await UserService()
+                                                .addToWatchlist(profile['_id']);
+                                            if (result['action'] == 'added') {
+                                              SnackBarUtil.showCustomSnackBar(
+                                                context,
+                                                '${profile['username']} has been added to your watchlist.',
+                                              );
+                                            } else if (result['action'] ==
+                                                'removed') {
+                                              SnackBarUtil.showCustomSnackBar(
+                                                context,
+                                                '${profile['username']} has been removed from your watchlist.',
+                                              );
+                                            }
+                                            setState(() {});
+                                          } catch (error) {
+                                            SnackBarUtil.showCustomSnackBar(
+                                              context,
+                                              'Failed to update watchlist: $error',
+                                              isError: true,
+                                            );
+                                          }
+                                        },
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: isInWatchlist
+                                              ? Colors.redAccent
+                                              : Colors.blueAccent,
+                                          foregroundColor: Colors.white,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(10),
+                                          ),
+                                        ),
+                                        child: Text(
+                                          isInWatchlist
+                                              ? 'Remove from Watchlist'
+                                              : 'Add to Watchlist',
+                                          style:
+                                              GoogleFonts.poppins(fontSize: 12),
                                         ),
                                       ),
-                                    );
-                                  },
-                                  str: "Edit Profile",
-                                ),
-                              ),
-                            ],
+                                    ),
+                                ],
+                              );
+                            },
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -138,7 +219,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             GestureDetector(
                               onTap: () async {
                                 try {
-                                  // Fetch the connection profiles once
                                   final connectionProfiles = await UserService()
                                       .getUserWatchlist(profile['username']);
                                   _showConnectionsList(context, 'Connections',
@@ -266,73 +346,80 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   itemCount: posts.length,
                   itemBuilder: (context, index) {
                     final post = posts[index];
-                    final isHovered = _hoveredIndex == index;
+                    final hoverNotifier =
+                        ValueNotifier<bool>(false); // Local hover state
 
-                    return GestureDetector(
-                      onTap: () => _showTextCommentDialog(post),
-                      child: MouseRegion(
-                        onEnter: (_) => setState(() => _hoveredIndex = index),
-                        onExit: (_) => setState(() => _hoveredIndex = null),
-                        child: Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(10),
-                              child: Image.network(
-                                post.img!,
-                                fit: BoxFit.cover,
-                                width: double.infinity,
-                                height: double.infinity,
-                              ),
-                            ),
-                            if (isHovered)
-                              Container(
-                                decoration: BoxDecoration(
-                                  color: Colors.black.withOpacity(0.5),
+                    return ValueListenableBuilder<bool>(
+                      valueListenable: hoverNotifier,
+                      builder: (context, isHovered, child) {
+                        return GestureDetector(
+                          onTap: () => _showTextCommentDialog(post),
+                          child: MouseRegion(
+                            onEnter: (_) => hoverNotifier.value = true,
+                            onExit: (_) => hoverNotifier.value = false,
+                            child: Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                ClipRRect(
                                   borderRadius: BorderRadius.circular(10),
+                                  child: Image.network(
+                                    post.img!,
+                                    fit: BoxFit.cover,
+                                    width: double.infinity,
+                                    height: double.infinity,
+                                  ),
                                 ),
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Row(
+                                if (isHovered)
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      color: Colors.black.withOpacity(0.5),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Column(
                                       mainAxisAlignment:
                                           MainAxisAlignment.center,
                                       children: [
-                                        const Icon(Icons.favorite,
-                                            color: Colors.white),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          '${post.likes.length}',
-                                          style: GoogleFonts.poppins(
-                                            color: Colors.white,
-                                            fontWeight: FontWeight.bold,
-                                          ),
+                                        Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: [
+                                            const Icon(Icons.favorite,
+                                                color: Colors.white),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              '${post.likes.length}',
+                                              style: GoogleFonts.poppins(
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: [
+                                            const Icon(Icons.comment,
+                                                color: Colors.white),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              '${post.comments.length}',
+                                              style: GoogleFonts.poppins(
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ],
                                     ),
-                                    const SizedBox(height: 8),
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        const Icon(Icons.comment,
-                                            color: Colors.white),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          '${post.comments.length}',
-                                          style: GoogleFonts.poppins(
-                                            color: Colors.white,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
                     );
                   },
                 );
@@ -341,6 +428,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildStatItem(BuildContext context,
+      {required String title, required String value}) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: GoogleFonts.poppins(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        Text(
+          title,
+          style: GoogleFonts.poppins(
+            fontSize: 14,
+            color: Colors.grey[700],
+          ),
+        ),
+      ],
     );
   }
 
@@ -431,11 +540,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                                 .add(user['_id']);
                                           });
                                         }
-                                        setState(() {
-                                          // Update the connection count dynamically
-                                          widget.profile['watchlistCount'] =
-                                              connections.length;
-                                        });
                                         SnackBarUtil.showCustomSnackBar(
                                           context,
                                           '${user['username']} has been ${result['action']} to your watchlist.',
@@ -482,78 +586,117 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  String _formatPostDate(DateTime dateTime) {
+    final now = DateTime.now();
+    final difference = now.difference(dateTime);
+
+    if (difference.inDays >= 1) {
+      return '${difference.inDays}d ago';
+    } else if (difference.inHours >= 1) {
+      return '${difference.inHours}h ago';
+    } else if (difference.inMinutes >= 1) {
+      return '${difference.inMinutes}m ago';
+    } else {
+      return 'Just now';
+    }
+  }
+
   void _showTextCommentDialog(Post post) {
     showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-          content: StatefulBuilder(
-            builder: (context, setDialogState) {
-              return SizedBox(
-                width: MediaQuery.of(context).size.width * 0.5,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Row(
-                      children: [
-                        CircleAvatar(
-                          backgroundImage: post.user.profileImg.isNotEmpty
-                              ? NetworkImage(post.user.profileImg)
-                              : const AssetImage(
-                                      'assets/images/placeholder.png')
-                                  as ImageProvider,
-                          radius: 25,
-                        ),
-                        const SizedBox(width: 12),
-                        Text(
-                          post.user.username,
-                          style: GoogleFonts.poppins(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black,
-                          ),
-                        ),
-                        Text(
-                          '• ${_formatPostDate(post.createdAt)}',
-                          style: GoogleFonts.poppins(
-                            color: Colors.grey,
-                            fontSize: 16,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      post.text,
-                      style: GoogleFonts.poppins(
-                        fontSize: 16,
-                        color: Colors.grey[700],
-                      ),
-                    ),
-                    const Divider(),
-                    _buildCommentsSection(post),
-                    const Divider(),
-                    _buildBottomSection(post, () {
-                      setDialogState(() {}); // Refresh the dialog state
-                    }),
-                  ],
+        return FutureBuilder<Map<String, dynamic>>(
+          future: _authService.getUserDetails(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            } else if (snapshot.hasError) {
+              return AlertDialog(
+                content: Text(
+                  'Error: ${snapshot.error}',
+                  style: GoogleFonts.poppins(color: Colors.red),
                 ),
               );
-            },
-          ),
-          actions: [
-            SizedBox(
-              width: 100,
-              child: MyButton(
-                onTap: () => Navigator.pop(context),
-                str: 'Close',
+            } else if (!snapshot.hasData || snapshot.data == null) {
+              return AlertDialog(
+                content: Text(
+                  'Unable to load user details.',
+                  style: GoogleFonts.poppins(color: Colors.grey),
+                ),
+              );
+            }
+
+            final loggedInUser = snapshot.data!;
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
               ),
-            ),
-          ],
+              content: StatefulBuilder(
+                builder: (context, setDialogState) {
+                  return SizedBox(
+                    width: MediaQuery.of(context).size.width * 0.5,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Row(
+                          children: [
+                            CircleAvatar(
+                              backgroundImage: post.user.profileImg.isNotEmpty
+                                  ? NetworkImage(post.user.profileImg)
+                                  : const AssetImage(
+                                          'assets/images/placeholder.png')
+                                      as ImageProvider,
+                              radius: 25,
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              post.user.username,
+                              style: GoogleFonts.poppins(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black,
+                              ),
+                            ),
+                            Text(
+                              '• ${_formatPostDate(post.createdAt)}',
+                              style: GoogleFonts.poppins(
+                                color: Colors.grey,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          post.text,
+                          style: GoogleFonts.poppins(
+                            fontSize: 16,
+                            color: Colors.grey[700],
+                          ),
+                        ),
+                        const Divider(),
+                        _buildCommentsSection(post),
+                        const Divider(),
+                        _buildBottomSection(post, loggedInUser, () {
+                          setDialogState(() {});
+                        }),
+                      ],
+                    ),
+                  );
+                },
+              ),
+              actions: [
+                SizedBox(
+                  width: 100,
+                  child: MyButton(
+                    onTap: () => Navigator.pop(context),
+                    str: 'Close',
+                  ),
+                ),
+              ],
+            );
+          },
         );
       },
     );
@@ -569,9 +712,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
               return Row(
                 children: [
                   CircleAvatar(
-                    backgroundImage: const AssetImage(
-                      'assets/images/placeholder.png',
-                    ),
+                    backgroundImage: comment.user.profileImg.isNotEmpty
+                        ? NetworkImage(comment.user.profileImg)
+                        : const AssetImage('assets/images/placeholder.png')
+                            as ImageProvider,
                     radius: 15,
                   ),
                   const SizedBox(width: 8),
@@ -612,7 +756,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           );
   }
 
-  Widget _buildBottomSection(Post post, void Function() refreshDialog) {
+  Widget _buildBottomSection(Post post, Map<String, dynamic> loggedInUser,
+      void Function() refreshDialog) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -620,15 +765,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
           children: [
             IconButton(
               icon: Icon(
-                post.likes.contains(widget.profile['_id'])
+                post.likes.contains(loggedInUser['_id'])
                     ? Icons.favorite
                     : Icons.favorite_border,
-                color: post.likes.contains(widget.profile['_id'])
+                color: post.likes.contains(loggedInUser['_id'])
                     ? Colors.red
                     : Colors.black,
               ),
               onPressed: () {
-                _toggleLike(post, onSuccess: refreshDialog);
+                _toggleLike(post, loggedInUser, onSuccess: refreshDialog);
               },
             ),
             if (post.likes.isNotEmpty)
@@ -659,7 +804,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             IconButton(
               icon: const Icon(Icons.send, color: Colors.blue),
               onPressed: () {
-                _addComment(post, refreshDialog);
+                _addComment(post, loggedInUser, refreshDialog);
               },
             ),
           ],
@@ -668,55 +813,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildStatItem(BuildContext context,
-      {required String title, required String value}) {
-    return Column(
-      children: [
-        Text(
-          value,
-          style: GoogleFonts.poppins(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        Text(
-          title,
-          style: GoogleFonts.poppins(
-            fontSize: 14,
-            color: Colors.grey[700],
-          ),
-        ),
-      ],
-    );
-  }
-
-  String _formatPostDate(DateTime dateTime) {
-    final now = DateTime.now();
-    final difference = now.difference(dateTime);
-
-    if (difference.inDays >= 1) {
-      return '${difference.inDays}d ago';
-    } else if (difference.inHours >= 1) {
-      return '${difference.inHours}h ago';
-    } else if (difference.inMinutes >= 1) {
-      return '${difference.inMinutes}m ago';
-    } else {
-      return 'Just now';
-    }
-  }
-
-  Future<void> _toggleLike(Post post, {Function? onSuccess}) async {
+  Future<void> _toggleLike(Post post, Map<String, dynamic> loggedInUser,
+      {Function? onSuccess}) async {
     try {
-      final isLiked = post.likes.contains(widget.profile['_id']);
+      final isLiked = post.likes.contains(loggedInUser['_id']);
       setState(() {
         if (isLiked) {
-          post.likes.remove(widget.profile['_id']);
+          post.likes.remove(loggedInUser['_id']);
         } else {
-          post.likes.add(widget.profile['_id']);
+          post.likes.add(loggedInUser['_id']);
         }
       });
 
-      await _postService.toggleLike(post.id, widget.profile['_id']);
+      await _postService.toggleLike(post.id, loggedInUser['_id']);
 
       if (onSuccess != null) onSuccess(); // Refresh dialog state
     } catch (error) {
@@ -728,32 +837,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  Future<void> _addComment(Post post, void Function() refreshDialog) async {
+  Future<void> _addComment(Post post, Map<String, dynamic> loggedInUser,
+      void Function() refreshDialog) async {
     final commentText = _commentController.text.trim();
     if (commentText.isEmpty) return;
 
     try {
-      // Create a new comment object
       final newComment = Comment(
         text: commentText,
-        user: User.fromJson(widget.profile),
+        user: User.fromJson(loggedInUser),
       );
 
-      // Update the UI immediately
       setState(() {
         post.comments.add(newComment);
-        _commentController.clear(); // Clear the input field
+        _commentController.clear();
       });
-
-      // Refresh the dialog UI to reflect the new comment
       refreshDialog();
 
-      // Update the backend
-      await _postService.addComment(
-        post.id,
-        widget.profile['_id'],
-        commentText,
-      );
+      await _postService.addComment(post.id, loggedInUser['_id'], commentText);
     } catch (error) {
       SnackBarUtil.showCustomSnackBar(
         context,

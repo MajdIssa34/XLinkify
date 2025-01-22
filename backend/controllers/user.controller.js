@@ -118,7 +118,7 @@ export const searchUsers = async (req, res) => {
           { username: { $regex: query, $options: 'i' } }, // Match username
           { fullName: { $regex: query, $options: 'i' } }, // Match full name
         ],
-      }).select('username fullName profileImg'); // Limit fields for performance
+      }).select('username fullName profileImg bio link'); // Limit fields for performance
   
       res.status(200).json({ users });
     } catch (error) {

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:x_frontend/screens/internal_screens/authentication_screens/login_screen.dart';
-import '../../../services/auth_service.dart';
-import '../../../widgets/my_text_field.dart';
-import '../../../widgets/my_button.dart';
+import 'package:x_frontend/screens/authentication_screens/login_screen.dart';
+import '../../services/auth_service.dart';
+import '../../widgets/my_text_field.dart';
+import '../../widgets/my_button.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({Key? key}) : super(key: key);

@@ -25,8 +25,10 @@ const PORT = process.env.PORT || 5000;
 
 // Allowed origins
 const allowedOrigins = [
-    "http://localhost:55488", // Your frontend development server
+    "https://xlinkify.web.app", // Your frontend development server
     "https://xlinkify.onrender.com", // Add your production URL here
+    "https://xlinkify.firebaseapp.com",
+    "https://xlinkify.com"
 ];
 
 // CORS Middleware

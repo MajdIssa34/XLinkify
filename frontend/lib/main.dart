@@ -13,7 +13,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Social Media App',
+      title: 'XLinkify',
       theme: ThemeData(
         primarySwatch: Colors.green,
       ),
